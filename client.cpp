@@ -2,7 +2,7 @@
     To run the client.cpp file:
     g++ client.cpp -o client
     To execute:
-    ./client 3542 10
+    ./client 3542 10 100
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,12 +21,26 @@
 
 using namespace std;
 
+
+class packet
+{
+    public:
+        bool isLast;
+        char charPayload;
+
+    packet()
+    {
+        isLast=false;
+    }    
+};
+
 int main(int argc, char const** argv) {
     if(argc < 3) {
-        cout << "Usage ./client <port-no> <burst-size>\n";
+        cout << "Usage ./client <port-no> <burst-size> <iterations>\n";
         exit(1);
     }
     int burstSize = stoi(argv[2]);
+    int iterations=stoi(argv[3]);
     int sockid;
     struct sockaddr_in addrport, clientAddr;
     struct hostent *server;
@@ -54,19 +68,27 @@ int main(int argc, char const** argv) {
     }
     char charArray[6] = "abcde";
     int ind = 0, burstTime = 0;
-    while(1) {
+    for(int i=0;i<iterations;i++) {
+        packet *Packet=new packet();
         // Write a character to the socket
-        int count = send(sockid, (void*)&charArray[ind], 1, 0);
+        Packet->charPayload=charArray[ind];
+        //last packet check
+        if(i==iterations-1)
+        {
+            Packet->isLast=true;
+        }
+        int count = send(sockid, Packet, sizeof(*Packet), 0);
         if(count < 0) {
             printf("Error on sending.\n");
         }
         ind = (ind + 1) % 5;
-        if(burstTime % burstTime == 0) {
+
+        burstTime++;
+        if(burstTime % burstSize == 0) {
             // Sleep for some time after sending burst
             sleep(1);
             burstTime = 0;
         }
-        burstTime++;
     }
 
     return 0;

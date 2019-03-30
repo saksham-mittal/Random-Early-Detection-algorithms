@@ -17,6 +17,7 @@
 #include <queue>
 #include <mutex>
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 int sockid, maxNumClients;
@@ -25,6 +26,23 @@ socklen_t clilen;
 int *clientsSockid;
 queue<char> Queue;
 mutex mtx;
+
+
+ofstream fout;
+
+
+class packet
+{
+    public:
+        bool isLast;
+        char charPayload;
+
+    packet()
+    {
+        isLast=false;
+    }    
+};
+
 
 void showq(queue<char> q) { 
     queue<char> g = q; 
@@ -54,6 +72,8 @@ void red(char* buffer) {
     }
     printf("Queue length: %lu\n", Queue.size());
     printf("Average queue length: %f\n", avg);
+    fout<<Queue.size()<<"\t"<<avg<<endl;
+
 
     // Check if the average queue length is between minimum
     // and maximum threshold, then probabilistically drop
@@ -98,14 +118,15 @@ void simulateRED(int index) {
     // i denotes the number of packets received by gateway till now
     int i = 0;
     while(1) {
-        int count = recv(clientsSockid[index], buffer, sizeof(buffer), 0);
+        packet *recvpacket=new packet;
+        int count = recv(clientsSockid[index], recvpacket, sizeof(*recvpacket), 0);
         if(count < 0) {
             printf("Error on receiving message from socket %d.\n", index);
         }
 
         // Process the packets using RED algorithm
         mtx.lock();
-        red(buffer);
+        red(&(recvpacket->charPayload));
         mtx.unlock();
 
         // Printing the queue
@@ -123,6 +144,9 @@ void simulateRED(int index) {
             if(!Queue.empty())
                 Queue.pop();
         } 
+
+        if(recvpacket->isLast)
+            break;
     }
     close(clientsSockid[index]);
 }
@@ -158,6 +182,8 @@ int main(int argc, char const** argv) {
     addrport.sin_addr.s_addr = htonl(INADDR_ANY);
     int t = 1;
     setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
+
+    fout.open("log-red.txt");
     
     if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) != -1) {
         // Socket is binded
