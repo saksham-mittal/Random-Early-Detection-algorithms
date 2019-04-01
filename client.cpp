@@ -1,8 +1,8 @@
-/* 
+/*
     To run the client.cpp file:
-    g++ client.cpp -o client
+    g++ client.cpp -o client -std=c++11 -lpthread
     To execute:
-    ./client 3542 1 100
+    ./client 3542 1 100 low
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,11 +51,14 @@ void sendPacket(int id, int ind) {
 
 int main(int argc, char const** argv) {
     if(argc < 3) {
-        cout << "Usage ./client <port-no> <index> <sim-time>\n";
+        cout << "Usage ./gateway <port-no> <index> <sim-time> <traffic>\n";
+        cout << "Available traffic: high, mid, and low\n";
         exit(1);
     }
     int index = stoi(argv[2]) - 1;
     int simTime = stoi(argv[3]);
+    string traffic = argv[4];
+
     struct sockaddr_in addrport, clientAddr;
     struct hostent *server;
 
@@ -81,15 +84,18 @@ int main(int argc, char const** argv) {
         exit(1);
     }
     int ind = 0, numHosts, x, burstSize;
+    
     ifstream fin;
-    fin.open("hostrate.txt");
+    string fileName = traffic + "/hostrate-" + traffic + ".txt";
+    fin.open(fileName);
     fin >> numHosts;
+
     for(int i=0; i<numHosts; i++) {
         fin >> x;
         if(i == index)
             burstSize = x; 
     }
-
+    
     for(int i=0; i<simTime; i++) {
         // Send burstSize packets in a burst(using threads)
         thread sendTh[burstSize];

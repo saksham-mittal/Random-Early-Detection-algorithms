@@ -2,7 +2,7 @@
     To run the gateway.cpp file:
     g++ gateway.cpp -o gateway -std=c++11 -lpthread
     To execute:
-    ./gateway 3542 100
+    ./gateway 3542 100 low
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,7 +53,7 @@ void showq(queue<char> q) {
 double avg = 0;             // Average queue length
 int count = -1;             // Count of packets since last probabilistic drop
 double wq = 0.003;          // Queue weight; standard value of 0.002 for early congestion detection
-int minThreshold = 5, maxThreshold = 15;
+int minThreshold = 5, maxThreshold = 17;
 double maxp = 0.02;         // Maximum probability of dropping a packet; standard value of 0.02
 double pb = 0;              // Probability of dropping a packet
 time_t qTime;               // Time since the queue was last idle
@@ -126,44 +126,52 @@ void dequeQueue() {
     cout << "Queue is dequeed\n";
 }
 
-void simulateRED() {
-    for(int t=0; t<simTime; t++) {
-        fout << Queue.size() << "\t" << avg << endl;
-        dequeQueue();
-        for(int i=0; i<maxNumClients; i++) {
-            int num = rand() % 2;
-            for(int j=0; j<hostRate[i]; j++) {
-                // The host is sending burst
-                packet *recvpacket=new packet;
-                int count = recv(clientsSockid[i], recvpacket, sizeof(*recvpacket), 0);
-                if(count < 0) {
-                    printf("Error on receiving message from socket %d.\n", i);
-                }
-                if(num == 1) {
-                    // num == 1 means that we need to process the burst
-                    // Process the packets using RED algorithm
-                    mtx.lock();
-                    red(&(recvpacket->charPayload));
-                    mtx.unlock();
-                }
-            }
+void simulateRED(int ind) {
+    int num = rand() % 2;
+    for(int j=0; j<hostRate[ind]; j++) {
+        // The host is sending burst
+        packet *recvpacket = new packet;
+        int count = recv(clientsSockid[ind], recvpacket, sizeof(*recvpacket), 0);
+        if(count < 0) {
+            printf("Error on receiving message from socket %d.\n", ind);
+        }
+        if(num == 1) {
+            // num == 1 means that we need to process the burst
+            // Process the packets using RED algorithm
+            mtx.lock();
+            red(&(recvpacket->charPayload));
+            mtx.unlock();
         }
     }
-    for(int i=0; i<maxNumClients; i++)
-        close(clientsSockid[i]);
 }
 
-void acceptingThread() {
+void acceptMethod() {
     clientsSockid = new int[maxNumClients];
-    thread clients[maxNumClients];
-    // Queue is idle when created
-    qTime = time(NULL);
-
     for(int i=0; i<maxNumClients; i++) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
-        clients[i] = thread(simulateRED);
     }
-    simulateRED();
+
+    // Queue is idle when created
+    // so intializing qTime with current time
+    qTime = time(NULL);
+
+    for(int t=0; t<simTime; t++) {
+        thread clients[maxNumClients];
+        fout << Queue.size() << "\t" << avg << endl;
+
+        // We are simulating the case that the gateway is 
+        // forwarding all the packets to the respective servers
+        dequeQueue();
+
+        for(int i=0; i<maxNumClients; i++)
+            clients[i] = thread(simulateRED, i);
+
+        for(int i=0; i<maxNumClients; i++)
+            clients[i].join();
+    }
+
+    for(int i=0; i<maxNumClients; i++)
+        close(clientsSockid[i]);
 }
 
 int main(int argc, char const** argv) {
@@ -183,7 +191,7 @@ int main(int argc, char const** argv) {
 
     for(int i=0; i<maxNumClients; i++)
         fin >> hostRate[i];
-
+        
     sockid = socket(PF_INET, SOCK_STREAM, 0);
     if(sockid < 0) {
         printf("Socket could not be opened.\n");
@@ -196,8 +204,10 @@ int main(int argc, char const** argv) {
     setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
 
     fout.open("log.txt");
+    // NOTE: Writing traffic level to log file
+    // for plotter to read 
     fout << traffic << endl;
-    
+
     if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) != -1) {
         // Socket is binded
         int status = listen(sockid, maxNumClients);
@@ -207,8 +217,7 @@ int main(int argc, char const** argv) {
         clilen = sizeof(clientAddr);
 
         cout << "Starting RED algorithm simulation for " << traffic << " traffic\n";
-        thread acceptThread = thread(acceptingThread);
-        acceptThread.join();
+        acceptMethod();
     }
     return 0;
 }

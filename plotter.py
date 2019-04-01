@@ -23,4 +23,5 @@ plt.legend()
 # plt.show()
 fileName = traffic.strip() + "/queues.png"
 plt.savefig(fileName, bbox_inches='tight')
+print("Graph plotted successfully")
 
