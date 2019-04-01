@@ -149,6 +149,7 @@ void acceptMethod() {
     clientsSockid = new int[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
+        cout<<"connected to client "<<i;
     }
 
     // Queue is idle when created
@@ -180,6 +181,7 @@ int main(int argc, char const** argv) {
         cout << "Available traffic: high, mid, and low\n";
         exit(1);
     }
+
     simTime = stoi(argv[2]);
     string traffic = argv[3];
 
@@ -196,7 +198,6 @@ int main(int argc, char const** argv) {
     if(sockid < 0) {
         printf("Socket could not be opened.\n");
     }
-
     addrport.sin_family = AF_INET;
     addrport.sin_port = htons(stoi(argv[1]));
     addrport.sin_addr.s_addr = htonl(INADDR_ANY);
