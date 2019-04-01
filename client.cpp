@@ -2,7 +2,7 @@
     To run the client.cpp file:
     g++ client.cpp -o client
     To execute:
-    ./client 3542 10 100
+    ./client 3542 1 100
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,11 +16,11 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <vector>
+#include <fstream>
 #include <iostream>
 #include <chrono>
 
 using namespace std;
-
 
 class packet
 {
@@ -34,14 +34,28 @@ class packet
     }    
 };
 
+int sockid;
+char charArray[6] = "abcde";
+
+// Method for sending packets in burst
+void sendPacket(int id, int ind) {
+    packet *Packet=new packet();
+
+    // Write a character to the socket
+    Packet->charPayload=charArray[ind];
+    int count = send(sockid, Packet, sizeof(*Packet), 0);
+    if(count < 0) {
+        printf("Error on sending.\n");
+    }
+}
+
 int main(int argc, char const** argv) {
     if(argc < 3) {
-        cout << "Usage ./client <port-no> <burst-size> <iterations>\n";
+        cout << "Usage ./client <port-no> <index> <sim-time>\n";
         exit(1);
     }
-    int burstSize = stoi(argv[2]);
-    int iterations=stoi(argv[3]);
-    int sockid;
+    int index = stoi(argv[2]) - 1;
+    int simTime = stoi(argv[3]);
     struct sockaddr_in addrport, clientAddr;
     struct hostent *server;
 
@@ -66,29 +80,26 @@ int main(int argc, char const** argv) {
         printf("ERROR enabling TCP_NODELAY");
         exit(1);
     }
-    char charArray[6] = "abcde";
-    int ind = 0, burstTime = 0;
-    for(int i=0;i<iterations;i++) {
-        packet *Packet=new packet();
-        // Write a character to the socket
-        Packet->charPayload=charArray[ind];
-        //last packet check
-        if(i==iterations-1)
-        {
-            Packet->isLast=true;
-        }
-        int count = send(sockid, Packet, sizeof(*Packet), 0);
-        if(count < 0) {
-            printf("Error on sending.\n");
-        }
-        ind = (ind + 1) % 5;
+    int ind = 0, numHosts, x, burstSize;
+    ifstream fin;
+    fin.open("hostrate.txt");
+    fin >> numHosts;
+    for(int i=0; i<numHosts; i++) {
+        fin >> x;
+        if(i == index)
+            burstSize = x; 
+    }
 
-        burstTime++;
-        if(burstTime % burstSize == 0) {
-            // Sleep for some time after sending burst
-            sleep(1);
-            burstTime = 0;
-        }
+    for(int i=0; i<simTime; i++) {
+        // Send burstSize packets in a burst(using threads)
+        thread sendTh[burstSize];
+        for(int j=0; j<burstSize; j++)
+            sendTh[j] = thread(sendPacket, j, ind);
+
+        for(int j=0; j<burstSize; j++)
+            sendTh[j].join();
+
+        ind = (ind + 1) % 5;
     }
 
     return 0;

@@ -1,21 +1,26 @@
 import matplotlib.pyplot as plt
+# plt.style.use('ggplot')
 
-
-with open("log-red.txt", "r") as fp:
+with open("log.txt", "r") as fp:
     lines = fp.readlines()
 
 queue = []
 avg=[]
-for line in lines:
-    queue_len, avg_len = line.split("\t")
-    queue.append(float(queue_len.strip("\n")))
-    avg.append(float(avg_len.strip("\n")))
-print(avg)
-print(queue)
+for count, line in enumerate(lines):
+    if count == 0:
+        traffic = line
+    else:
+        queue_len, avg_len = line.split("\t")
+        queue.append(float(queue_len))
+        avg.append(float(avg_len))
 
-
-plt.plot(range(len(queue)), queue,label="current queue length")
-plt.plot(range(len(avg)), avg,label="Average queue len")
+plt.figure(num=None, figsize=(12, 7), dpi=90, facecolor='w', edgecolor='k')
+plt.locator_params(axis='x', nbins=10)
+plt.plot(range(len(queue)), queue, color='#32CD32', marker='+', label="Current queue length")
+plt.plot(range(len(avg)), avg, color='red', marker='D', ms=3, label="Average queue length")
 plt.legend()
-plt.show()
+
+# plt.show()
+fileName = traffic.strip() + "/queues.png"
+plt.savefig(fileName, bbox_inches='tight')
 

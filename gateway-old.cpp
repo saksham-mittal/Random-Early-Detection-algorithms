@@ -2,7 +2,7 @@
     To run the gateway.cpp file:
     g++ gateway.cpp -o gateway -std=c++11 -lpthread
     To execute:
-    ./gateway 3542 100
+    ./gateway 3542 2
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +20,7 @@
 #include <fstream>
 
 using namespace std;
-int sockid, maxNumClients, simTime;
+int sockid, maxNumClients;
 struct sockaddr_in addrport, clientAddr;
 socklen_t clilen;
 int *clientsSockid;
@@ -109,48 +109,45 @@ void red(char* buffer) {
         // Since the average queue length is below minimum threshold, initialize count to -1
         count = -1;
     }
-
-    // Printing the queue
-    showq(Queue);
 }
 
-int *hostRate;
-
-void dequeQueue() {
-    mtx.lock();
-    while(!Queue.empty()) { 
-        Queue.pop(); 
-    }
-    mtx.unlock();
-    sleep(1);
-    cout << "Queue is dequeed\n";
-}
-
-void simulateRED() {
-    for(int t=0; t<simTime; t++) {
-        fout << Queue.size() << "\t" << avg << endl;
-        dequeQueue();
-        for(int i=0; i<maxNumClients; i++) {
-            int num = rand() % 2;
-            for(int j=0; j<hostRate[i]; j++) {
-                // The host is sending burst
-                packet *recvpacket=new packet;
-                int count = recv(clientsSockid[i], recvpacket, sizeof(*recvpacket), 0);
-                if(count < 0) {
-                    printf("Error on receiving message from socket %d.\n", i);
-                }
-                if(num == 1) {
-                    // num == 1 means that we need to process the burst
-                    // Process the packets using RED algorithm
-                    mtx.lock();
-                    red(&(recvpacket->charPayload));
-                    mtx.unlock();
-                }
-            }
+void simulateRED(int index) {
+    char* buffer = (char *)malloc(sizeof(char));
+    // i denotes the number of packets received by gateway till now
+    int i = 0;
+    while(1) {
+        packet *recvpacket=new packet;
+        int count = recv(clientsSockid[index], recvpacket, sizeof(*recvpacket), 0);
+        if(count < 0) {
+            printf("Error on receiving message from socket %d.\n", index);
         }
+
+        // Process the packets using RED algorithm
+        mtx.lock();
+        red(&(recvpacket->charPayload));
+        mtx.unlock();
+
+        // Printing the queue
+        showq(Queue);
+        i++;
+        // Delete 3 elements for every 5th packet added to the queue
+        // This is used to simulate that the gateway is also delivering 
+        // the packets and hence queue is also getting dequeued
+        if(i % 5 == 0) {
+            i = 0;
+            if(!Queue.empty())
+                Queue.pop();
+            if(!Queue.empty())
+                Queue.pop();
+            if(!Queue.empty())
+                Queue.pop();
+        }
+
+
+        if(recvpacket->isLast)
+            break;
     }
-    for(int i=0; i<maxNumClients; i++)
-        close(clientsSockid[i]);
+    close(clientsSockid[index]);
 }
 
 void acceptingThread() {
@@ -161,29 +158,32 @@ void acceptingThread() {
 
     for(int i=0; i<maxNumClients; i++) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
-        clients[i] = thread(simulateRED);
+        clients[i] = thread(simulateRED, i);
     }
-    simulateRED();
+    for(int i=0; i<maxNumClients; i++) {
+        clients[i].join();
+    }
+}
+
+void dequeingThread() {
+    while(1) {
+        mtx.lock();
+        fout << Queue.size() << "\t" << avg << endl;
+        while(!Queue.empty()) { 
+            Queue.pop(); 
+        }
+        mtx.unlock();
+        sleep(1);
+        cout << "Queue is dequeed\n";
+    }
 }
 
 int main(int argc, char const** argv) {
     if(argc < 3) {
-        cout << "Usage ./gateway <port-no> <sim-time> <traffic>\n";
-        cout << "Available traffic: high, mid, and low\n";
+        cout << "Usage ./gateway <port-no> <max-clients>\n";
         exit(1);
     }
-    simTime = stoi(argv[2]);
-    string traffic = argv[3];
-
-    ifstream fin;
-    string fileName = traffic + "/hostrate-" + traffic + ".txt";
-    fin.open(fileName);
-    fin >> maxNumClients;
-    hostRate = new int[maxNumClients];
-
-    for(int i=0; i<maxNumClients; i++)
-        fin >> hostRate[i];
-
+    maxNumClients = stoi(argv[2]);
     sockid = socket(PF_INET, SOCK_STREAM, 0);
     if(sockid < 0) {
         printf("Socket could not be opened.\n");
@@ -195,18 +195,19 @@ int main(int argc, char const** argv) {
     int t = 1;
     setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
 
-    fout.open("log.txt");
-    fout << traffic << endl;
+    fout.open("log-red.txt");
     
     if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) != -1) {
         // Socket is binded
+        cout << "Socket binding successful\n";
         int status = listen(sockid, maxNumClients);
         if(status < 0) {
             printf("Error in listening.\n");
         }
         clilen = sizeof(clientAddr);
+        thread dequeThread = thread(dequeingThread);
+        dequeThread.detach();
 
-        cout << "Starting RED algorithm simulation for " << traffic << " traffic\n";
         thread acceptThread = thread(acceptingThread);
         acceptThread.join();
     }
