@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 # plt.style.use('ggplot')
 
-with open("log.txt", "r") as fp:
+with open("../samples/log.txt", "r") as fp:
     lines = fp.readlines()
 
 queue = []
@@ -21,7 +21,7 @@ plt.plot(range(len(avg)), avg, color='red', marker='D', ms=3, label="Average que
 plt.legend()
 
 # plt.show()
-fileName = traffic.strip() + "/queues.png"
+fileName = "./samples/" + traffic.strip() + "/queues.png"
 plt.savefig(fileName, bbox_inches='tight')
 print("Graph plotted successfully")
 

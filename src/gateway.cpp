@@ -215,13 +215,16 @@ int main(int argc, char const** argv) {
     string traffic = argv[3];
 
     ifstream fin;
-    string fileName = traffic + "/hostrate-" + traffic + ".txt";
+    string fileName = "./samples/" + traffic + "/hostrate-" + traffic + ".txt";
     fin.open(fileName);
     fin >> maxNumClients;
+    cout << maxNumClients << endl;
+
     hostRate = new int[maxNumClients];
 
     for(int i=0; i<maxNumClients; i++)
         fin >> hostRate[i];
+    fin.close();
         
     sockid = socket(PF_INET, SOCK_STREAM, 0);
     if(sockid < 0) {
@@ -233,7 +236,7 @@ int main(int argc, char const** argv) {
     int t = 1;
     setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
 
-    fout.open("log.txt");
+    fout.open("./samples/log.txt");
     // NOTE: Writing traffic level to log file
     // for plotter to read 
     fout << traffic << endl;
@@ -249,5 +252,7 @@ int main(int argc, char const** argv) {
         cout << "Starting RED algorithm simulation for " << traffic << " traffic\n";
         acceptMethod();
     }
+    fout.close();
+    
     return 0;
 }

@@ -86,7 +86,7 @@ int main(int argc, char const** argv) {
     int ind = 0, numHosts, x, burstSize;
     
     ifstream fin;
-    string fileName = traffic + "/hostrate-" + traffic + ".txt";
+    string fileName = "./samples/" + traffic + "/hostrate-" + traffic + ".txt";
     fin.open(fileName);
     fin >> numHosts;
 
@@ -95,7 +95,8 @@ int main(int argc, char const** argv) {
         if(i == index)
             burstSize = x; 
     }
-    
+    fin.close();
+
     cout << "Starting client " << index + 1 << "\n";
     for(int i=0; i<simTime; i++) {
         // The simTime takes to effect in 1 second
