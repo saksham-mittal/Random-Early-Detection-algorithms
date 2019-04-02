@@ -1,0 +1,8 @@
+Simulate the sending random bursts from client side
+Simulate WRED and RRED algorithms
+Simulate sending packets to servers from gateway
+Add forwarding tables to the gateway
+Integrate circleci testing for c++
+Add relevant test cases for testing
+Report
+multiple gateways

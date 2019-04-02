@@ -1,6 +1,6 @@
 /*
     To run the client.cpp file:
-    g++ client.cpp -o client -std=c++11 -lpthread
+    g++ client-new.cpp -o client -std=c++11 -lpthread
     To execute:
     ./client 3542 1 100 low
 */
@@ -39,10 +39,10 @@ char charArray[6] = "abcde";
 
 // Method for sending packets in burst
 void sendPacket(int id, int ind) {
-    packet *Packet=new packet();
+    packet *Packet = new packet();
 
     // Write a character to the socket
-    Packet->charPayload=charArray[ind];
+    Packet->charPayload = charArray[ind];
     int count = send(sockid, Packet, sizeof(*Packet), 0);
     if(count < 0) {
         printf("Error on sending.\n");
@@ -96,17 +96,47 @@ int main(int argc, char const** argv) {
             burstSize = x; 
     }
     
+    cout << "Starting client " << index + 1 << "\n";
     for(int i=0; i<simTime; i++) {
-        // Send burstSize packets in a burst(using threads)
-        thread sendTh[burstSize];
-        for(int j=0; j<burstSize; j++)
-            sendTh[j] = thread(sendPacket, j, ind);
+        // The simTime takes to effect in 1 second
+        auto start = chrono::steady_clock::now();
 
-        for(int j=0; j<burstSize; j++)
-            sendTh[j].join();
+        srand((index + 1) * time(NULL));
+        // srand((index + 1) * (i + 1));
+        int num = rand() % 2;       // Sending bursts randomly
+        
+        // cout << num << endl;
+        if(num == 1) {
+            cout << "Sending burst\n";
+            // Send burstSize packets in a burst(using threads)
+            thread sendTh[burstSize];
+            for(int j=0; j<burstSize; j++) {
+                sendTh[j] = thread(sendPacket, j, ind);
+            }
 
-        ind = (ind + 1) % 5;
+            for(int j=0; j<burstSize; j++)
+                sendTh[j].join();
+
+            ind = (ind + 1) % 5;
+        } else
+            cout << "Not Sending burst\n";
+        if(i == simTime - 1) {
+            // Send close connection packet
+            packet *Packet = new packet();
+
+            // Write a character to the socket
+            Packet->isLast = true;
+            int count = send(sockid, Packet, sizeof(*Packet), 0);
+            if(count < 0) {
+                printf("Error on sending.\n");
+            }
+        }
+        auto end = chrono::steady_clock::now();
+        int tTaken = chrono::duration_cast<chrono::microseconds>(end - start).count();
+        // cout << tTaken << endl;
+        usleep(1000000 - tTaken);
     }
+    cout << "Client " << index + 1 << " finished\n";
 
     return 0;
 }

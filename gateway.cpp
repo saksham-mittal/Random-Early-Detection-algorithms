@@ -14,20 +14,13 @@
 #include <math.h>
 #include <netdb.h>
 #include <thread>
+#include <chrono>
 #include <queue>
 #include <mutex>
 #include <iostream>
 #include <fstream>
 
 using namespace std;
-int sockid, maxNumClients, simTime;
-struct sockaddr_in addrport, clientAddr;
-socklen_t clilen;
-int *clientsSockid;
-queue<char> Queue;
-mutex mtx;
-
-ofstream fout;
 
 // Class to represent a single packet
 class packet {
@@ -39,6 +32,15 @@ class packet {
         isLast=false;
     }    
 };
+
+int sockid, maxNumClients, simTime;
+struct sockaddr_in addrport, clientAddr;
+socklen_t clilen;
+int *clientsSockid;
+queue<char> Queue;
+mutex mtx;
+vector<packet*> bufferPackets;
+ofstream fout;
 
 void showq(queue<char> q) { 
     queue<char> g = q; 
@@ -70,8 +72,10 @@ void red(char* buffer) {
     } else {
         avg = ((1 - wq) * avg) + (wq * Queue.size());
     }
+    /* 
     printf("Queue length: %lu\n", Queue.size());
     printf("Average queue length: %f\n", avg);
+    */
 
     // Check if the average queue length is between minimum
     // and maximum threshold, then probabilistically drop
@@ -89,13 +93,16 @@ void red(char* buffer) {
             pa = 1.0;
         }
         double randomP = (rand()%100)/100.00;
-        // Dropping packet with probability p 
+        // Dropping packet with probability pa
         if(randomP < pa) {
             printf("Dropping packet: %c\n", buffer[0]);
             // Resseting count to 0
             count = 0;
         } else {
+            printf("Packet buffered\n");
             Queue.push(buffer[0]);
+            // Initialize count to -1 since packet is buffered
+            count = -1;
         }
     } else if(maxThreshold <= avg) {
         // Queue size is more than max threshold allowed
@@ -105,13 +112,14 @@ void red(char* buffer) {
     } else {
         // Average queue length is less than minimum threshold 
         // Accept all packets
+        printf("Packet buffered\n");
         Queue.push(buffer[0]);
         // Since the average queue length is below minimum threshold, initialize count to -1
         count = -1;
     }
 
     // Printing the queue
-    showq(Queue);
+    // showq(Queue);
 }
 
 int *hostRate;
@@ -122,26 +130,42 @@ void dequeQueue() {
         Queue.pop(); 
     }
     mtx.unlock();
-    sleep(1);
-    cout << "Queue is dequeed\n";
+    // cout << "Queue is dequeed\n";
 }
 
-void simulateRED(int ind) {
-    int num = rand() % 2;
-    for(int j=0; j<hostRate[ind]; j++) {
-        // The host is sending burst
-        packet *recvpacket = new packet;
-        int count = recv(clientsSockid[ind], recvpacket, sizeof(*recvpacket), 0);
-        if(count < 0) {
-            printf("Error on receiving message from socket %d.\n", ind);
-        }
-        if(num == 1) {
-            // num == 1 means that we need to process the burst
-            // Process the packets using RED algorithm
+// For bufferPackets synchronization
+mutex mtx2;
+
+void simulateRED() {
+    mtx2.lock();
+    while(bufferPackets.size()) {
+        int buffer_size = bufferPackets.size();
+
+        // Process the packets in the buffer using RED algorithm
+        for(int i=0; i<buffer_size; i++) {
             mtx.lock();
-            red(&(recvpacket->charPayload));
+            red(&(bufferPackets[i]->charPayload));
             mtx.unlock();
+            bufferPackets.erase(bufferPackets.begin()); 
         }
+    }
+    mtx2.unlock();
+}
+
+void receivePackets(int id) {
+    while(1) {
+        packet *recvpacket = new packet;
+        int count = recv(clientsSockid[id], recvpacket, sizeof(*recvpacket), 0);
+        if(count < 0) {
+            printf("Error on receiving message from socket %d.\n", id);
+        }
+        if(recvpacket->isLast)
+            return;
+        // Add the recieved packet to the shared buffer
+        mtx2.lock();
+        bufferPackets.push_back(recvpacket);
+        // printf("recieved packet %lu\n",bufferPackets.size());
+        mtx2.unlock();
     }
 }
 
@@ -149,7 +173,13 @@ void acceptMethod() {
     clientsSockid = new int[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
-        cout<<"connected to client "<<i;
+        cout << "Client " << i + 1 << " connected\n";
+    }
+
+    thread clients[maxNumClients];
+    for(int i=0; i<maxNumClients; i++) {
+        clients[i] = thread(receivePackets, i);
+        clients[i].detach();
     }
 
     // Queue is idle when created
@@ -157,18 +187,17 @@ void acceptMethod() {
     qTime = time(NULL);
 
     for(int t=0; t<simTime; t++) {
-        thread clients[maxNumClients];
+        auto start = chrono::steady_clock::now();
         fout << Queue.size() << "\t" << avg << endl;
 
         // We are simulating the case that the gateway is 
         // forwarding all the packets to the respective servers
         dequeQueue();
 
-        for(int i=0; i<maxNumClients; i++)
-            clients[i] = thread(simulateRED, i);
-
-        for(int i=0; i<maxNumClients; i++)
-            clients[i].join();
+        simulateRED();
+        auto end = chrono::steady_clock::now();
+        int tTaken = chrono::duration_cast<chrono::microseconds>(end - start).count();
+        usleep(1000000 - tTaken);
     }
 
     for(int i=0; i<maxNumClients; i++)
