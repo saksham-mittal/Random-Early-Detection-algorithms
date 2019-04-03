@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 # plt.style.use('ggplot')
 
-with open("../samples/log.txt", "r") as fp:
+with open("samples/log.txt", "r") as fp:
     lines = fp.readlines()
 
 queue = []

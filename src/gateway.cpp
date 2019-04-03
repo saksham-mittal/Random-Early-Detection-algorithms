@@ -34,22 +34,22 @@ class packet {
 };
 
 int sockid, maxNumClients, simTime;
-struct sockaddr_in addrport, clientAddr;
-socklen_t clilen;
-int *clientsSockid;
-queue<char> Queue;
+struct sockaddr_in addrport, clientAddr,serverAddr;
+socklen_t clilen,servlen;
+int *clientsSockid,servSockid;
+queue<packet*> Queue;
 mutex mtx;
 vector<packet*> bufferPackets;
 ofstream fout;
 
-void showq(queue<char> q) { 
-    queue<char> g = q; 
-    while(!g.empty()) { 
-        cout << '\t' << g.front(); 
-        g.pop(); 
-    }
-    cout << '\n'; 
-}
+// void showq(queue<char> q) { 
+//     queue<char> g = q; 
+//     while(!g.empty()) { 
+//         cout << '\t' << g.front(); 
+//         g.pop(); 
+//     }
+//     cout << '\n'; 
+// }
 
 // RED Algorithm's parameter initialization
 double avg = 0;             // Average queue length
@@ -60,7 +60,7 @@ double maxp = 0.02;         // Maximum probability of dropping a packet; standar
 double pb = 0;              // Probability of dropping a packet
 time_t qTime;               // Time since the queue was last idle
 
-void red(char* buffer) {
+void red(packet* Packet) {
     // Calculating queue length
     if(Queue.size() == 0) {
         // double m = (time(NULL) - qTime)/0.001;
@@ -95,25 +95,25 @@ void red(char* buffer) {
         double randomP = (rand()%100)/100.00;
         // Dropping packet with probability pa
         if(randomP < pa) {
-            printf("Dropping packet: %c\n", buffer[0]);
+            printf("Dropping packet\n");
             // Resseting count to 0
             count = 0;
         } else {
             printf("Packet buffered\n");
-            Queue.push(buffer[0]);
+            Queue.push(Packet);
             // Initialize count to -1 since packet is buffered
             count = -1;
         }
     } else if(maxThreshold <= avg) {
         // Queue size is more than max threshold allowed
         // Drop all packets 
-        printf("Dropping packet: %c\n", buffer[0]);
+        printf("Dropping packet\n");
         count = 0;
     } else {
         // Average queue length is less than minimum threshold 
         // Accept all packets
         printf("Packet buffered\n");
-        Queue.push(buffer[0]);
+        Queue.push(Packet);
         // Since the average queue length is below minimum threshold, initialize count to -1
         count = -1;
     }
@@ -127,7 +127,9 @@ int *hostRate;
 void dequeQueue() {
     mtx.lock();
     while(!Queue.empty()) { 
-        Queue.pop(); 
+         packet *Packet = Queue.front();
+         send(servSockid,Packet,sizeof(*Packet),0);
+         Queue.pop();
     }
     mtx.unlock();
     // cout << "Queue is dequeed\n";
@@ -144,7 +146,7 @@ void simulateRED() {
         // Process the packets in the buffer using RED algorithm
         for(int i=0; i<buffer_size; i++) {
             mtx.lock();
-            red(&(bufferPackets[i]->charPayload));
+            red(bufferPackets[i]);
             mtx.unlock();
             bufferPackets.erase(bufferPackets.begin()); 
         }
@@ -160,7 +162,10 @@ void receivePackets(int id) {
             printf("Error on receiving message from socket %d.\n", id);
         }
         if(recvpacket->isLast)
+        {
+            Queue.push(recvpacket);
             return;
+        }    
         // Add the recieved packet to the shared buffer
         mtx2.lock();
         bufferPackets.push_back(recvpacket);
@@ -170,6 +175,13 @@ void receivePackets(int id) {
 }
 
 void acceptMethod() {
+
+
+
+    servSockid = accept(sockid, (struct sockaddr *)&serverAddr, &servlen);
+    cout<<servSockid<<endl;
+
+    //connect to clients
     clientsSockid = new int[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
@@ -202,6 +214,8 @@ void acceptMethod() {
 
     for(int i=0; i<maxNumClients; i++)
         close(clientsSockid[i]);
+    dequeQueue();    
+    close(servSockid);    
 }
 
 int main(int argc, char const** argv) {
@@ -242,17 +256,21 @@ int main(int argc, char const** argv) {
     fout << traffic << endl;
 
     if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) != -1) {
-        // Socket is binded
+        // Socket is bound
         int status = listen(sockid, maxNumClients);
         if(status < 0) {
             printf("Error in listening.\n");
         }
+        clilen = sizeof(serverAddr);
         clilen = sizeof(clientAddr);
 
         cout << "Starting RED algorithm simulation for " << traffic << " traffic\n";
+        
+
         acceptMethod();
     }
     fout.close();
+
     
     return 0;
 }
