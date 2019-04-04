@@ -5,7 +5,7 @@
     ./gateway 3542 100 low
 */
 #include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -122,8 +122,6 @@ void red(char* buffer) {
     // showq(Queue);
 }
 
-int *hostRate;
-
 void dequeQueue() {
     mtx.lock();
     while(!Queue.empty()) { 
@@ -220,12 +218,6 @@ int main(int argc, char const** argv) {
     fin >> maxNumClients;
     cout << maxNumClients << endl;
 
-    hostRate = new int[maxNumClients];
-
-    for(int i=0; i<maxNumClients; i++)
-        fin >> hostRate[i];
-    fin.close();
-        
     sockid = socket(PF_INET, SOCK_STREAM, 0);
     if(sockid < 0) {
         printf("Socket could not be opened.\n");

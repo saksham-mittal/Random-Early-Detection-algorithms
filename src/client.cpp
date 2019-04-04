@@ -5,7 +5,7 @@
     ./client 3542 1 100 low
 */
 #include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
