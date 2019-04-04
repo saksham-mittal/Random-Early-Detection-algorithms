@@ -6,6 +6,8 @@ g++ src/gateway.cpp -o bin/gateway -std=c++11 -lpthread
 # Compiling client.cpp file
 g++ src/client.cpp -o bin/client -std=c++11 -lpthread
 
+g++ src/server.cpp -o bin/server -std=c++11 
+
 # & detaches to different terminal
 xterm -e "bin/./gateway 3542 $1 $2" &
 
@@ -13,6 +15,11 @@ xterm -e "bin/./gateway 3542 $1 $2" &
 BACK_PID=$!
 
 sleep 0.1
+
+xterm -e "bin/./server 3542" &
+
+sleep 0.1
+
 for i in 1 2 3 4 5 6
 do
     xterm -e "bin/./client 3542 $i $1 $2" &
