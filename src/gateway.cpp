@@ -6,14 +6,7 @@
 */
 #include "gateway.h"
 
-void gateway::showq(queue<char> q) { 
-    queue<char> g = q; 
-    while(!g.empty()) { 
-        cout << '\t' << g.front(); 
-        g.pop(); 
-    }
-    cout << '\n'; 
-}
+
 
 void gateway::red(packet* Packet) {
     // Calculating queue length
@@ -78,17 +71,30 @@ void gateway::red(packet* Packet) {
 }
 
 void gateway::dequeQueue() {
+    cout<<"Queue Dequeued"<<endl;
     mtx.lock();
     while(!Queue.empty()) { 
         packet *Packet = Queue.front();
         // Send the packet to the outlink using the destPortNo and the Forwarding table
         int pNo = Packet->destPortNo;
-        int outlinkPortNo = portId[pNo];
-        
-        int count = send(mp[outlinkPortNo], Packet, sizeof(*Packet), 0);
-        if(count < 0) {
-            printf("Error on sending.\n");
+
+        if(pNo != -1) {
+            int outlinkPortNo = portId[pNo];
+            int count = send(mp[outlinkPortNo], Packet, sizeof(*Packet), 0);
+            if(count < 0) {
+                printf("Error on sending.\n");
+            }
+        } else {
+            for(auto elem : mp) {
+                int count = send(elem.second, Packet, sizeof(*Packet), 0);
+                if(count < 0) {
+                    printf("Error on sending.\n");
+                } else {
+                    printf("Last packet sent to outlink on port %d\n", elem.first);
+                }
+            }
         }
+        
         Queue.pop();
     }
     mtx.unlock();
@@ -118,12 +124,13 @@ void gateway::receivePackets(int id) {
         if(count < 0) {
             printf("Error on receiving message from socket %d.\n", id);
         }
-        if(recvpacket->isLast)
-        {
-            Queue.push(recvpacket);
+        if(recvpacket->isLast) {
+            mtx3.lock();
+            receivedLastPackets++;
+            mtx3.unlock();
+            cout<<"Recieved Last Packet"<<endl;
             return;
         }
-
         // Add the recieved packet to the shared buffer
         mtx2.lock();
         bufferPackets.push_back(recvpacket);
@@ -132,7 +139,7 @@ void gateway::receivePackets(int id) {
     }
 }
 
-void gateway::acceptMethod(string traffic) {
+void gateway::acceptMethod(int index, string traffic) {
     // Connect to outlinks
     set<int> s;         // Contains the port nos. of the outlinks
     for(auto elem : portId) {
@@ -171,12 +178,14 @@ void gateway::acceptMethod(string traffic) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
         cout << "Inlink " << i + 1 << " connected\n";
     }
+    if(index==2)
+        usleep(1300000);
 
+    receivedLastPackets = 0;
     thread clients[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
         // We can't call non static member methods directly from threads
         clients[i] = thread(&gateway::receivePackets, this, i);
-        clients[i].detach();
     }
 
     cout << "Starting RED algorithm simulation for " << traffic << " traffic\n";
@@ -187,7 +196,7 @@ void gateway::acceptMethod(string traffic) {
 
     for(int t=0; t<simTime; t++) {
         auto start = chrono::steady_clock::now();
-        fout << Queue.size() << "\t" << avg << endl;
+        usleep(100000 * (index + 2));
 
         // We are simulating the case that the gateway is 
         // forwarding all the packets to the respective servers
@@ -196,18 +205,30 @@ void gateway::acceptMethod(string traffic) {
         simulateRED();
         auto end = chrono::steady_clock::now();
         int tTaken = chrono::duration_cast<chrono::microseconds>(end - start).count();
+        cout<<"Time taken:"<<tTaken<<endl;
+        
+        fout << Queue.size() << "\t" << avg << endl;
         usleep(1000000 - tTaken);
     }
+
+    for(int i=0; i<maxNumClients; i++) {
+        clients[i].join();
+    }
+
+    packet *recvpacket = new packet;
+    recvpacket->isLast = true;
+    recvpacket->destPortNo = -1;
+    Queue.push(recvpacket);
 
     for(int i=0; i<maxNumClients; i++)
         close(clientsSockid[i]);
 
     dequeQueue();
-
+    
     // Closing the sockets to the outlinks
     for(auto elem : s) {
         close(mp[elem]);
-    } 
+    }
     // close(servSockid);    
 }
 
@@ -218,7 +239,7 @@ int main(int argc, char const** argv) {
         exit(1);
     }
 
-    int indexNo = stoi(argv[1]);
+    int indexNo = stoi(argv[1]) - 1;
     int st = stoi(argv[2]); 
     gateway gt(indexNo, st, argv[3]);
 

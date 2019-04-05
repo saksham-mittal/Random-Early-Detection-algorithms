@@ -55,7 +55,7 @@ public:
                 break;
             }
         }
-        cout << portNo << " " << maxNumClients << endl;
+        fin.close();
 
         sockid = socket(PF_INET, SOCK_STREAM, 0);
         if(sockid < 0) {

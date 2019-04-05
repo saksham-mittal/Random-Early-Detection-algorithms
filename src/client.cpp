@@ -47,12 +47,11 @@ bool client::connectionSetup() {
 }
 
 void client::simulateHost(int index, int simTime) {
-    cout << "Starting client " << index + 1 << "\n";
+    cout << "Starting client " << index + 1 << " simulation\n";
 
     for(int i=0; i<simTime; i++) {
         // The simTime takes to effect in 1 second
         auto start = chrono::steady_clock::now();
-
         srand((index + 1) * time(NULL));
         // srand((index + 1) * (i + 1));
         int num = rand() % 2;       // Sending bursts randomly
@@ -63,7 +62,7 @@ void client::simulateHost(int index, int simTime) {
             // Send burstSize packets in a burst(using threads)
             thread sendTh[burstSize];
             for(int j=0; j<burstSize; j++) {
-                sendTh[j] = thread(&client::sendPacket,this, j, ind);
+                sendTh[j] = thread(&client::sendPacket, this, j, ind);
             }
 
             for(int j=0; j<burstSize; j++)
