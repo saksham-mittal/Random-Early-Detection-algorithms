@@ -4,97 +4,65 @@
     To execute:
     ./client 3542 1 100 low
 */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <thread>
-#include <strings.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <vector>
-#include <fstream>
-#include <iostream>
-#include <chrono>
+#include "server.h"
 
-using namespace std;
-
-class packet
-{
-    public:
-        bool isLast;
-        char charPayload;
-
-    packet()
-    {
-        isLast=false;
-    }    
-};
-
-
-
-// Method for sending packets in burst
-
-int main(int argc, char const** argv) {
-    if(argc < 1) {
-        cout << "Usage ./server <port-no>\n";
-        
-        exit(1);
-    }
-
-    //set up connection to gateway
-
-    struct sockaddr_in addrport, serverAddr;
-    struct hostent *server;
-
-    int sockid = socket(PF_INET, SOCK_STREAM, 0);
-    if(sockid < 0) {
-        printf("Socket could not be opened.\n");
-    }
-
-    addrport.sin_family = AF_INET;
-    addrport.sin_port = htons(atoi(argv[1]));
-    addrport.sin_addr.s_addr = inet_addr("127.0.0.1");
-    cout<<argv[1]<<endl;
-    if(connect(sockid, (struct sockaddr *) &addrport, sizeof(addrport)) < 0) {
-        printf("Connection failed.\n");
-    }
-    
-    int n = 1;
-    // Set socket options to TCP_NODELAY which disables Nagle's algorithm -
-    //  - buffering short packets until a large packet is created to save bandwidth
-    n = setsockopt(sockid, IPPROTO_TCP, TCP_NODELAY, &n, sizeof(n));
-    if (n < 0)  {
-        printf("ERROR enabling TCP_NODELAY");
-        exit(1);
-    }
-    int lastPackets = 0, x,rcv_bytes;
-
-
-
-    cout << "Starting Server " <<"\n";
-    while(1)
-    {
-        packet *recvpacket=new packet;
-        rcv_bytes=recv(sockid,recvpacket,sizeof(*recvpacket),0);
-        //count recieved last packets
-
-        //TODO: Do something with recv'd packets
+void server::receivePackets(int id) {
+    set<int> clientsConnected;
+    while(1) {
+        packet *recvpacket = new packet;
+        int count = recv(clientsSockid[id], recvpacket, sizeof(*recvpacket), 0);
+        if(count < 0) {
+            printf("Error on receiving message from socket %d.\n", id);
+        }
+        if(clientsConnected.find(recvpacket->clientNum)==clientsConnected.end())
+        {
+            clientsConnected.insert(recvpacket->clientNum);
+            mtx.lock();
+            numClients += 1;
+            mtx.unlock();
+        }
         if(recvpacket->isLast==true)
         {
-            lastPackets++;
-            cout<<"client finished"<<endl;
+            mtx.lock();
+            lastPacketsRecieved+=1;
+            if(numClients==lastPacketsRecieved)
+                break;
+            mtx.unlock();    
         }
-        //break when all last packets recv'd    
-        if(lastPackets==6)
-            break;
+    }
+}
 
+void server::acceptMethod() {
+    // Connect to clients
+    clientsSockid = new int[maxNumClients];
+    cout << "hii1\n";
+    for(int i=0; i<maxNumClients; i++) {
+        clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
+        cout << "Inlink " << i + 1 << " connected\n";
+    }
+    cout << "hii2\n";
+
+    thread clients[maxNumClients];
+    for(int i=0; i<maxNumClients; i++) {
+        // We can't call non static member methods directly from threads
+        clients[i] = thread(&server::receivePackets, this, i);
     }
 
-    cout<<"All packets recieved, Server Terminating"<<endl;
-    close(sockid);
+    for(int i=0; i<maxNumClients; i++) {
+        clients[i].join();
+    }
+    cout << "hii3\n";
+}
+
+int main(int argc, char const** argv) {
+    if(argc != 2) {
+        cout << "Usage ./server <index>\n";
+        exit(1);
+    }
+
+    int index = stoi(argv[1]) - 1;
+
+    server sv(index);
+
     return 0;
 }

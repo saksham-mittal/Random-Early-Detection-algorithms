@@ -4,63 +4,18 @@
     To execute:
     ./gateway 3542 100 low
 */
-#include <stdio.h>
-#include <cstdlib>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <math.h>
-#include <netdb.h>
-#include <thread>
-#include <chrono>
-#include <queue>
-#include <mutex>
-#include <iostream>
-#include <fstream>
+#include "gateway.h"
 
-using namespace std;
+void gateway::showq(queue<char> q) { 
+    queue<char> g = q; 
+    while(!g.empty()) { 
+        cout << '\t' << g.front(); 
+        g.pop(); 
+    }
+    cout << '\n'; 
+}
 
-// Class to represent a single packet
-class packet {
-    public:
-        bool isLast;
-        char charPayload;
-
-    packet() {
-        isLast=false;
-    }    
-};
-
-int sockid, maxNumClients, simTime;
-struct sockaddr_in addrport, clientAddr,serverAddr;
-socklen_t clilen,servlen;
-int *clientsSockid,servSockid;
-queue<packet*> Queue;
-mutex mtx;
-vector<packet*> bufferPackets;
-ofstream fout;
-
-// void showq(queue<char> q) { 
-//     queue<char> g = q; 
-//     while(!g.empty()) { 
-//         cout << '\t' << g.front(); 
-//         g.pop(); 
-//     }
-//     cout << '\n'; 
-// }
-
-// RED Algorithm's parameter initialization
-double avg = 0;             // Average queue length
-int count = -1;             // Count of packets since last probabilistic drop
-double wq = 0.003;          // Queue weight; standard value of 0.002 for early congestion detection
-int minThreshold = 5, maxThreshold = 17;
-double maxp = 0.02;         // Maximum probability of dropping a packet; standard value of 0.02
-double pb = 0;              // Probability of dropping a packet
-time_t qTime;               // Time since the queue was last idle
-
-void red(packet* Packet) {
+void gateway::red(packet* Packet) {
     // Calculating queue length
     if(Queue.size() == 0) {
         // double m = (time(NULL) - qTime)/0.001;
@@ -72,7 +27,7 @@ void red(packet* Packet) {
     } else {
         avg = ((1 - wq) * avg) + (wq * Queue.size());
     }
-    /* 
+    /* For debugging reasons
     printf("Queue length: %lu\n", Queue.size());
     printf("Average queue length: %f\n", avg);
     */
@@ -122,21 +77,25 @@ void red(packet* Packet) {
     // showq(Queue);
 }
 
-void dequeQueue() {
+void gateway::dequeQueue() {
     mtx.lock();
     while(!Queue.empty()) { 
-         packet *Packet = Queue.front();
-         send(servSockid,Packet,sizeof(*Packet),0);
-         Queue.pop();
+        packet *Packet = Queue.front();
+        // Send the packet to the outlink using the destPortNo and the Forwarding table
+        int pNo = Packet->destPortNo;
+        int outlinkPortNo = portId[pNo];
+        
+        int count = send(mp[outlinkPortNo], Packet, sizeof(*Packet), 0);
+        if(count < 0) {
+            printf("Error on sending.\n");
+        }
+        Queue.pop();
     }
     mtx.unlock();
     // cout << "Queue is dequeed\n";
 }
 
-// For bufferPackets synchronization
-mutex mtx2;
-
-void simulateRED() {
+void gateway::simulateRED() {
     mtx2.lock();
     while(bufferPackets.size()) {
         int buffer_size = bufferPackets.size();
@@ -152,7 +111,7 @@ void simulateRED() {
     mtx2.unlock();
 }
 
-void receivePackets(int id) {
+void gateway::receivePackets(int id) {
     while(1) {
         packet *recvpacket = new packet;
         int count = recv(clientsSockid[id], recvpacket, sizeof(*recvpacket), 0);
@@ -163,7 +122,8 @@ void receivePackets(int id) {
         {
             Queue.push(recvpacket);
             return;
-        }    
+        }
+
         // Add the recieved packet to the shared buffer
         mtx2.lock();
         bufferPackets.push_back(recvpacket);
@@ -172,25 +132,54 @@ void receivePackets(int id) {
     }
 }
 
-void acceptMethod() {
+void gateway::acceptMethod(string traffic) {
+    // Connect to outlinks
+    set<int> s;         // Contains the port nos. of the outlinks
+    for(auto elem : portId) {
+        s.insert(elem.second);
+    }
 
+    set<int> :: iterator itr;
+    itr = s.begin();
+    cout << "Outlinks port nos.\n";
+    for(auto elem : s)
+        cout << elem << " ";
+    cout << "\n";
 
+    for(int i=0; i<s.size(); i++) {
+        int sck = socket(PF_INET, SOCK_STREAM, 0);
+        struct sockaddr_in servaddr;
 
-    servSockid = accept(sockid, (struct sockaddr *)&serverAddr, &servlen);
-    cout<<servSockid<<endl;
+        servaddr.sin_family = AF_INET;
+        servaddr.sin_port = htons(*itr);
+        servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    //connect to clients
+        if(connect(sck, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
+            printf("Connection failed.\n");
+        }
+        cout << "Outlink on port " << *itr << " connected\n";
+        
+        // mapping outlink port no. to its sockid
+        mp[*itr] = sck;
+        itr++;
+    }
+    // Connection to outlinks finished
+
+    // Connect to clients
     clientsSockid = new int[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
-        cout << "Client " << i + 1 << " connected\n";
+        cout << "Inlink " << i + 1 << " connected\n";
     }
 
     thread clients[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
-        clients[i] = thread(receivePackets, i);
+        // We can't call non static member methods directly from threads
+        clients[i] = thread(&gateway::receivePackets, this, i);
         clients[i].detach();
     }
+
+    cout << "Starting RED algorithm simulation for " << traffic << " traffic\n";
 
     // Queue is idle when created
     // so intializing qTime with current time
@@ -212,57 +201,26 @@ void acceptMethod() {
 
     for(int i=0; i<maxNumClients; i++)
         close(clientsSockid[i]);
-    dequeQueue();    
-    close(servSockid);    
+
+    dequeQueue();
+
+    // Closing the sockets to the outlinks
+    for(auto elem : s) {
+        close(mp[elem]);
+    } 
+    // close(servSockid);    
 }
 
 int main(int argc, char const** argv) {
-    if(argc < 3) {
-        cout << "Usage ./gateway <port-no> <sim-time> <traffic>\n";
+    if(argc != 4) {
+        cout << "Usage ./gateway <index-no> <sim-time> <traffic>\n";
         cout << "Available traffic: high, mid, and low\n";
         exit(1);
     }
 
-    simTime = stoi(argv[2]);
-    string traffic = argv[3];
+    int indexNo = stoi(argv[1]);
+    int st = stoi(argv[2]); 
+    gateway gt(indexNo, st, argv[3]);
 
-    ifstream fin;
-    string fileName = "./samples/" + traffic + "/hostrate-" + traffic + ".txt";
-    fin.open(fileName);
-    fin >> maxNumClients;
-    cout << maxNumClients << endl;
-
-    sockid = socket(PF_INET, SOCK_STREAM, 0);
-    if(sockid < 0) {
-        printf("Socket could not be opened.\n");
-    }
-    addrport.sin_family = AF_INET;
-    addrport.sin_port = htons(stoi(argv[1]));
-    addrport.sin_addr.s_addr = htonl(INADDR_ANY);
-    int t = 1;
-    setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
-
-    fout.open("./samples/log.txt");
-    // NOTE: Writing traffic level to log file
-    // for plotter to read 
-    fout << traffic << endl;
-
-    if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) != -1) {
-        // Socket is bound
-        int status = listen(sockid, maxNumClients);
-        if(status < 0) {
-            printf("Error in listening.\n");
-        }
-        clilen = sizeof(serverAddr);
-        clilen = sizeof(clientAddr);
-
-        cout << "Starting RED algorithm simulation for " << traffic << " traffic\n";
-        
-
-        acceptMethod();
-    }
-    fout.close();
-
-    
     return 0;
 }
