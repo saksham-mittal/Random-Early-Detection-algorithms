@@ -16,21 +16,9 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include "packet.h"
 
 using namespace std;
-
-// Class to represent a single packet
-class packet {
-public:
-    bool isLast;
-    int destPortNo;
-    char charPayload;
-    int clientNum;
-
-    packet() {
-        isLast=false;
-    }    
-};
 
 class gateway {
 public:
@@ -44,7 +32,7 @@ public:
     mutex mtx3;                 // For receivedLastPacket variable's synchronization
     vector<packet*> bufferPackets;
     map<int, int> portId;       // For mapping dest port nos to outlink's port no.
-    map<int, int> mp;
+    map<int, int> mp;           // Sort of forwarding table
     ofstream fout;
 
     // RED Algorithm's parameters
@@ -72,7 +60,7 @@ public:
         }
 
         fin >> portNo >> maxNumClients;
-        cout << "port no = " << portNo << " maxNumClients = " << maxNumClients << endl;
+        cout << "Port number of gateway = " << portNo << "\nNumber of inlinks = " << maxNumClients << endl;
         int szMap, e1, e2;
         fin >> szMap;
 
@@ -82,6 +70,7 @@ public:
         }
 
         fin.close();
+        cout << "Topology file read\n";
         // Topology reading complete
 
         // Creating socket for the gateway

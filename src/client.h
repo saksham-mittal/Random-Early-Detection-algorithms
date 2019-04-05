@@ -13,21 +13,9 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include "packet.h"
 
 using namespace std;
-
-// Class to represent a single packet
-class packet {
-public:
-    bool isLast;
-    int destPortNo;
-    char charPayload;
-    int clientNum;
-
-    packet() {
-        isLast=false;
-    }    
-};
 
 class client {
 public:
@@ -41,6 +29,7 @@ public:
         string fileName = "./topology/topology-client.txt";
         fin.open(fileName);
         int n, x, y;
+
         fin >> n;
         for(int i=0; i<n; i++) {
             fin >> x >> y;
@@ -50,15 +39,16 @@ public:
                 break;
             }
         }
-        cout << portNo << " " << dPortNo << endl;
+        
+        cout << "Outlink port number = " << portNo << "\nDestination Port number = " << dPortNo << endl;
         fin.close();
+        cout << "Topology file read\n";
         // Reading topology file complete
 
         // Reading hostrate file
         fileName = "./samples/" + traffic + "/hostrate-" + traffic + ".txt";
         fin.open(fileName);
         fin >> numHosts;
-        cout << "numHosts = " << numHosts << endl;
 
         for(int i=0; i<numHosts; i++) {
             fin >> x;
@@ -67,7 +57,7 @@ public:
                 break;
             }
         }
-        cout << burstSize << endl;
+        cout << "Burst size of host = " << burstSize << endl;
         fin.close();
         // Reading hostrate file complete
 

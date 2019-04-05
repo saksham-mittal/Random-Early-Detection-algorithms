@@ -1,8 +1,8 @@
 /*
-    To run the client.cpp file:
-    g++ client-new.cpp -o client -std=c++11 -lpthread
+    To run the server.cpp file:
+    g++ server.cpp -o server -std=c++11 -lpthread
     To execute:
-    ./client 3542 1 100 low
+    ./server 1
 */
 #include "server.h"
 
@@ -13,12 +13,14 @@ void server::receivePackets(int id) {
         if(count < 0) {
             printf("Error on receiving message from socket %d.\n", id);
         }
-        if(recvpacket->isLast==true)
+        if(recvpacket->isLast==true) {
+            cout << "Last packet received";
             break;   
+        }
     }
 }
 
-void server::acceptMethod() {
+void server::acceptMethod(int index) {
     // Connect to clients
     clientsSockid = new int[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
@@ -35,6 +37,7 @@ void server::acceptMethod() {
     for(int i=0; i<maxNumClients; i++) {
         clients[i].join();
     }
+    cout << "Server " << index + 1 << "'s simulation finished\n";
 }
 
 int main(int argc, char const** argv) {

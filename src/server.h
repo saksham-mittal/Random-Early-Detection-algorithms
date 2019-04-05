@@ -15,21 +15,9 @@
 #include <iostream>
 #include <fstream>
 #include <set>
+#include "packet.h"
 
 using namespace std;
-
-// Class to represent a single packet
-class packet {
-public:
-    bool isLast;
-    int destPortNo;
-    char charPayload;
-    int clientNum;
-
-    packet() {
-        isLast=false;
-    }    
-};
 
 class server {
 public:
@@ -46,6 +34,7 @@ public:
         string fileName = "./topology/topology-server.txt";
         fin.open(fileName);
         int numServs, x, y;
+        
         fin >> numServs;
         for(int i=0; i<numServs; i++) {
             fin >> x >> y;
@@ -55,7 +44,10 @@ public:
                 break;
             }
         }
+
+        cout << "Port number = " << portNo << "\nNumber of inlinks = " << maxNumClients << endl;
         fin.close();
+        cout << "Topology file read\n";
 
         sockid = socket(PF_INET, SOCK_STREAM, 0);
         if(sockid < 0) {
@@ -79,12 +71,13 @@ public:
             clilen = sizeof(clientAddr);
         }
 
-        acceptMethod();
+        acceptMethod(index);
     }
 
     // This method accepts connection from all clients
     // and calls the receive method on threads for each client
-    void acceptMethod();
+    void acceptMethod(int index);
 
+    // The server creates thread for each inlink and calls this method
     void receivePackets(int id);
 };

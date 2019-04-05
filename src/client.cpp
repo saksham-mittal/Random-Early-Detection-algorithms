@@ -1,8 +1,8 @@
 /*
     To run the client.cpp file:
-    g++ client-new.cpp -o client -std=c++11 -lpthread
+    g++ client.cpp -o client -std=c++11 -lpthread
     To execute:
-    ./client 3542 1 100 low
+    ./client 1 100 low
 */
 #include "client.h"
 
@@ -12,7 +12,7 @@ void client::sendPacket(int id, int ind) {
 
     // Write a character to the socket
     Packet->charPayload = charArray[ind];
-    Packet->clientNum=ind;
+    
     int count = send(sockid, Packet, sizeof(*Packet), 0);
     if(count < 0) {
         printf("Error on sending.\n");
@@ -56,6 +56,7 @@ void client::simulateHost(int index, int simTime) {
         // srand((index + 1) * (i + 1));
         int num = rand() % 2;       // Sending bursts randomly
         
+        cout << "#" << i + 1 << ": ";
         // cout << num << endl;
         if(num == 1) {
             cout << "Sending burst\n";
@@ -84,10 +85,8 @@ void client::simulateHost(int index, int simTime) {
         }
         auto end = chrono::steady_clock::now();
         int tTaken = chrono::duration_cast<chrono::microseconds>(end - start).count();
-        // cout << tTaken << endl;
         usleep(1000000 - tTaken);
     }
-
     cout << "Client " << index + 1 << " finished\n";
 }
 

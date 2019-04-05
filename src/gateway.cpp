@@ -2,11 +2,9 @@
     To run the gateway.cpp file:
     g++ gateway.cpp -o gateway -std=c++11 -lpthread
     To execute:
-    ./gateway 3542 100 low
+    ./gateway 1 100 low
 */
 #include "gateway.h"
-
-
 
 void gateway::red(packet* Packet) {
     // Calculating queue length
@@ -37,14 +35,15 @@ void gateway::red(packet* Packet) {
         if(count == 50) {
             // count has reached 1/maxp, 
             // Need to drop packets now
-            printf("Count has reached 1/maxp. Dropping next packet\n");
+            printf("Count has reached 1/maxp. Dropping packet\n");
             pa = 1.0;
         }
         double randomP = (rand()%100)/100.00;
         // Dropping packet with probability pa
-        if(randomP < pa) {
-            printf("Dropping packet\n");
-            // Resseting count to 0
+        if(randomP <= pa) {
+            if(count != 50)
+                printf("Dropping packet\n");
+            // Resetting count to 0
             count = 0;
         } else {
             printf("Packet buffered\n");
@@ -65,13 +64,11 @@ void gateway::red(packet* Packet) {
         // Since the average queue length is below minimum threshold, initialize count to -1
         count = -1;
     }
-
     // Printing the queue
     // showq(Queue);
 }
 
 void gateway::dequeQueue() {
-    cout<<"Queue Dequeued"<<endl;
     mtx.lock();
     while(!Queue.empty()) { 
         packet *Packet = Queue.front();
@@ -148,10 +145,11 @@ void gateway::acceptMethod(int index, string traffic) {
 
     set<int> :: iterator itr;
     itr = s.begin();
-    cout << "Outlinks port nos.\n";
+    cout << "---------------------\n";
+    cout << "Outlink's port numbers\n";
     for(auto elem : s)
-        cout << elem << " ";
-    cout << "\n";
+        cout << elem << "\n";
+    cout << "---------------------\n";
 
     for(int i=0; i<s.size(); i++) {
         int sck = socket(PF_INET, SOCK_STREAM, 0);
@@ -202,14 +200,17 @@ void gateway::acceptMethod(int index, string traffic) {
         // forwarding all the packets to the respective servers
         dequeQueue();
 
+        cout << "#" << t + 1 << ": " << endl;
         simulateRED();
         auto end = chrono::steady_clock::now();
         int tTaken = chrono::duration_cast<chrono::microseconds>(end - start).count();
-        cout<<"Time taken:"<<tTaken<<endl;
         
+        mtx.lock();
         fout << Queue.size() << "\t" << avg << endl;
+        mtx.unlock();
         usleep(1000000 - tTaken);
     }
+    cout << "Simulation finished\n";
 
     for(int i=0; i<maxNumClients; i++) {
         clients[i].join();
@@ -224,12 +225,12 @@ void gateway::acceptMethod(int index, string traffic) {
         close(clientsSockid[i]);
 
     dequeQueue();
+    cout << "Close connection packet sent\n";
     
     // Closing the sockets to the outlinks
     for(auto elem : s) {
         close(mp[elem]);
     }
-    // close(servSockid);    
 }
 
 int main(int argc, char const** argv) {
