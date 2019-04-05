@@ -31,7 +31,7 @@ public:
 
 class client {
 public:
-    int sockid, portNo, dPortNo, numHosts, burstSize, ind = 0;
+    int sockid, portNo, dPortNo, numHosts, burstSize, ind;
     char charArray[6] = "abcde";
     struct sockaddr_in addrport;
     
@@ -51,12 +51,14 @@ public:
             }
         }
         cout << portNo << " " << dPortNo << endl;
+        fin.close();
         // Reading topology file complete
 
         // Reading hostrate file
         fileName = "./samples/" + traffic + "/hostrate-" + traffic + ".txt";
         fin.open(fileName);
         fin >> numHosts;
+        cout << "numHosts = " << numHosts << endl;
 
         for(int i=0; i<numHosts; i++) {
             fin >> x;
@@ -65,11 +67,13 @@ public:
                 break;
             }
         }
-        // Reading hostrate file complete
+        cout << burstSize << endl;
         fin.close();
+        // Reading hostrate file complete
 
         connectionSetup();
-
+        
+        ind = 0;
         simulateHost(index, simTime);
     }
 

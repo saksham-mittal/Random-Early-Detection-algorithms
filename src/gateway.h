@@ -34,13 +34,14 @@ public:
 
 class gateway {
 public:
-    int sockid, maxNumClients, simTime, portNo;
+    int sockid, maxNumClients, simTime, portNo, receivedLastPackets;
     struct sockaddr_in addrport, clientAddr;
     socklen_t clilen;
     int *clientsSockid;
     queue<packet*> Queue;
     mutex mtx;                  // For RED() packet synchronization
     mutex mtx2;                 // For bufferPackets synchronization
+    mutex mtx3;                 // For receivedLastPacket variable's synchronization
     vector<packet*> bufferPackets;
     map<int, int> portId;       // For mapping dest port nos to outlink's port no.
     map<int, int> mp;
@@ -65,7 +66,7 @@ public:
         fin.open(fileName);
         string line;
         while(getline(fin, line)) {
-            if(line == ("#" + to_string(indexNo))) {
+            if(line == ("#" + to_string(indexNo + 1))) {
                 break;
             }
         }
@@ -106,14 +107,14 @@ public:
             clilen = sizeof(clientAddr);
         }
 
-        fileName = "./samples/log-" + to_string(indexNo) + ".txt";
+        fileName = "./samples/log-" + to_string(indexNo + 1) + ".txt";
         fout.open(fileName);
         // NOTE: Writing traffic level to log file
         // for plotter to read 
         fout << traffic << endl;
 
         // Starting simulation for this gateway 
-        acceptMethod(traffic);
+        acceptMethod(indexNo, traffic);
 
         fout.close(); 
     }
@@ -134,7 +135,7 @@ public:
     // This method accepts connection from all clients 
     // and creates connection to the outlinks as well
     // The simulateRED() method is called from this method
-    void acceptMethod(string traffic);
+    void acceptMethod(int index, string traffic);
 
     // Helper method to show the contents of the queue
     void showq(queue<char> q);

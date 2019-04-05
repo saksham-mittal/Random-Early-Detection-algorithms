@@ -21,7 +21,6 @@ sleep 1
 
 # Get most recent PID detach
 BACK_PID=$!
-# echo $BACK_PID
 
 for gatewayIndex in 3 2 1
 do

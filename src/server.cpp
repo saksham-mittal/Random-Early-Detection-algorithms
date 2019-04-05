@@ -7,40 +7,24 @@
 #include "server.h"
 
 void server::receivePackets(int id) {
-    set<int> clientsConnected;
     while(1) {
         packet *recvpacket = new packet;
         int count = recv(clientsSockid[id], recvpacket, sizeof(*recvpacket), 0);
         if(count < 0) {
             printf("Error on receiving message from socket %d.\n", id);
         }
-        if(clientsConnected.find(recvpacket->clientNum)==clientsConnected.end())
-        {
-            clientsConnected.insert(recvpacket->clientNum);
-            mtx.lock();
-            numClients += 1;
-            mtx.unlock();
-        }
         if(recvpacket->isLast==true)
-        {
-            mtx.lock();
-            lastPacketsRecieved+=1;
-            if(numClients==lastPacketsRecieved)
-                break;
-            mtx.unlock();    
-        }
+            break;   
     }
 }
 
 void server::acceptMethod() {
     // Connect to clients
     clientsSockid = new int[maxNumClients];
-    cout << "hii1\n";
     for(int i=0; i<maxNumClients; i++) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
         cout << "Inlink " << i + 1 << " connected\n";
     }
-    cout << "hii2\n";
 
     thread clients[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
@@ -51,7 +35,6 @@ void server::acceptMethod() {
     for(int i=0; i<maxNumClients; i++) {
         clients[i].join();
     }
-    cout << "hii3\n";
 }
 
 int main(int argc, char const** argv) {

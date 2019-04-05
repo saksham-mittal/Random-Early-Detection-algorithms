@@ -6,7 +6,7 @@ index=sys.argv[1]
 
 # plt.style.use('ggplot')
 
-with open("samples/log-{}.txt".format(index), "r") as fp:
+with open("./samples/log-{}.txt".format(index), "r") as fp:
     lines = fp.readlines()
 
 queue = []
