@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.7.2)
 project(Random_Early_Detection_Algorithms)
 find_package (Threads)
 #Bring the headers, such as Student.h into the project
