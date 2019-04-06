@@ -1,15 +1,6 @@
 # !/bin/sh
 # usage sh run.sh <sim_time> <traffic_level>
 
-# Compiling gateway.cpp file
-g++ src/gateway.cpp -o bin/gateway -std=c++11 -lpthread
-
-# Compiling server.cpp file
-g++ src/server.cpp -o bin/server -std=c++11 -lpthread
-
-# Compiling client.cpp file
-g++ src/client.cpp -o bin/client -std=c++11 -lpthread
-
 # & detaches to different terminal
 for servIndex in 1 2 3 4
 do

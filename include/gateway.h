@@ -73,42 +73,21 @@ public:
         cout << "Topology file read\n";
         // Topology reading complete
 
-        // Creating socket for the gateway
-        sockid = socket(PF_INET, SOCK_STREAM, 0);
-        if(sockid < 0) {
-            printf("Socket could not be opened.\n");
-        }
-        addrport.sin_family = AF_INET;
-        addrport.sin_port = htons(portNo);
-        addrport.sin_addr.s_addr = htonl(INADDR_ANY);
-        int t = 1;
-        setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
-
-        if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) < 0) {
-            printf("Error in binding socket\n");
-        } else {
-            // Socket is bound
-            int status = listen(sockid, maxNumClients);
-            if(status < 0) {
-                printf("Error in listening.\n");
-            }
-            // servlen = sizeof(serverAddr);
-            clilen = sizeof(clientAddr);
-        }
-
         fileName = "./samples/log-" + to_string(indexNo + 1) + ".txt";
         fout.open(fileName);
         // NOTE: Writing traffic level to log file
         // for plotter to read 
         fout << traffic << endl;
-
-        // Starting simulation for this gateway 
-        acceptMethod(indexNo, traffic);
-
-        fout.close(); 
+    }
+    //destructor
+    ~gateway()
+    {
+        fout.close();
     }
 
     /* Methods for the Gateway */
+    void setupConnection();
+
     // Method for simulating RED algorithm on a packet
     void red(packet* packet);
 

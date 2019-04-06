@@ -4,7 +4,32 @@
     To execute:
     ./gateway 1 100 low
 */
-#include "gateway.h"
+#include "../include/gateway.h"
+
+void gateway::setupConnection() {
+    // Creating socket for the gateway
+    sockid = socket(PF_INET, SOCK_STREAM, 0);
+    if(sockid < 0) {
+        printf("Socket could not be opened.\n");
+    }
+    addrport.sin_family = AF_INET;
+    addrport.sin_port = htons(portNo);
+    addrport.sin_addr.s_addr = htonl(INADDR_ANY);
+    int t = 1;
+    setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
+
+    if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) < 0) {
+        printf("Error in binding socket\n");
+    } else {
+        // Socket is bound
+        int status = listen(sockid, maxNumClients);
+        if(status < 0) {
+            printf("Error in listening.\n");
+        }
+        // servlen = sizeof(serverAddr);
+        clilen = sizeof(clientAddr);
+    }
+}
 
 void gateway::red(packet* Packet) {
     // Calculating queue length
@@ -244,5 +269,9 @@ int main(int argc, char const** argv) {
     int st = stoi(argv[2]); 
     gateway gt(indexNo, st, argv[3]);
 
+    gt.setupConnection();
+
+    // Starting simulation for this gateway 
+    gt.acceptMethod(indexNo, argv[3]);
     return 0;
 }

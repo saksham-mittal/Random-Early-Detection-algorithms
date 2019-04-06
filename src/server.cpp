@@ -4,7 +4,7 @@
     To execute:
     ./server 1
 */
-#include "server.h"
+#include "../include/server.h"
 
 void server::receivePackets(int id) {
     while(1) {

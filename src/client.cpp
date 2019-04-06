@@ -4,7 +4,7 @@
     To execute:
     ./client 1 100 low
 */
-#include "client.h"
+#include "../include/client.h"
 
 void client::sendPacket(int id, int ind) {
     packet *Packet = new packet();
