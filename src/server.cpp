@@ -48,7 +48,7 @@ int main(int argc, char const** argv) {
 
     int index = stoi(argv[1]) - 1;
 
-    server sv(index);
+    server sv(index,"./samples/RED/topology/topology-server.txt");
 
     return 0;
 }

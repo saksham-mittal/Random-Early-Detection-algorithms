@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <assert.h>
 #include "packet.h"
 
 using namespace std;
@@ -23,11 +24,16 @@ public:
     char charArray[6] = "abcde";
     struct sockaddr_in addrport;
     
-    client(int index, int simTime, string traffic) {
+    client(int index, int simTime, string traffic,string topologyPath) {
         // Reading topology file for getting the info of the gateway
         ifstream fin;
-        string fileName = "./topology/topology-client.txt";
+        string fileName = topologyPath;
+        
+
+        // assert(fileName.find("topology")!=string::npos);
+        cout<<fileName<<endl;
         fin.open(fileName);
+
         int n, x, y;
 
         fin >> n;
@@ -46,8 +52,10 @@ public:
         // Reading topology file complete
 
         // Reading hostrate file
-        fileName = "./samples/" + traffic + "/hostrate-" + traffic + ".txt";
-        fin.open(fileName);
+       
+        string outputPath = fileName.substr(0, fileName.find("topology"));
+        string outFileName = outputPath + traffic + "/hostrate-" + traffic + ".txt";
+        fin.open(outFileName);
         fin >> numHosts;
 
         for(int i=0; i<numHosts; i++) {

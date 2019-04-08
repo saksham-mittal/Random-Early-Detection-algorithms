@@ -267,7 +267,7 @@ int main(int argc, char const** argv) {
 
     int indexNo = stoi(argv[1]) - 1;
     int st = stoi(argv[2]); 
-    gateway gt(indexNo, st, argv[3]);
+    gateway gt(indexNo, st, string(argv[3]),"./samples/RED/topology/topology-gateway.txt");
 
     gt.setupConnection();
 

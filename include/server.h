@@ -28,10 +28,10 @@ public:
     int numClients=0,lastPacketsRecieved=0;
     mutex mtx;
 
-    server(int index) {
+    server(int index,string topologyPath) {
         // Reading topology file for getting the info of the server
         ifstream fin;
-        string fileName = "./topology/topology-server.txt";
+        string fileName = topologyPath;
         fin.open(fileName);
         int numServs, x, y;
         

@@ -100,6 +100,6 @@ int main(int argc, char const** argv) {
     int simTime = stoi(argv[2]);
     string traffic = argv[3];
 
-    client cl(index, simTime, traffic);
+    client cl(index, simTime, traffic,"./samples/RED/topology/topology-client.txt");
     return 0;
 }

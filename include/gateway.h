@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <thread>
 #include <arpa/inet.h>
+#include <assert.h>
 #include <chrono>
 #include <queue>
 #include <mutex>
@@ -45,12 +46,12 @@ public:
     time_t qTime;               // Time since the queue was last idle
 
     // Constructor for Gateway object
-    gateway(int indexNo, int simulationTime, string traffic) {
+    gateway(int indexNo, int simulationTime, string traffic,string topologyPath) {
         simTime = simulationTime;
 
         // Reading topology file for getting the info of the gateway
         ifstream fin;
-        string fileName = "./topology/topology-gateway.txt";
+        string fileName = topologyPath;
         fin.open(fileName);
         string line;
         while(getline(fin, line)) {
@@ -73,9 +74,14 @@ public:
         cout << "Topology file read\n";
         // Topology reading complete
 
-        fileName = "./samples/log-" + to_string(indexNo + 1) + ".txt";
-        fout.open(fileName);
+        //get output file path(topology must be in topology folder)
+        // assert(fileName.find("topology")!=string::npos);
+        string outputPath=fileName.substr(0,fileName.find("topology"));
+        string outFileName = outputPath+"/log-" + to_string(indexNo + 1) + ".txt";
+        fout.open(outFileName);
         // NOTE: Writing traffic level to log file
+
+        
         // for plotter to read 
         fout << traffic << endl;
     }
@@ -106,5 +112,5 @@ public:
     void acceptMethod(int index, string traffic);
 
     // Helper method to show the contents of the queue
-    void showq(queue<char> q);
+    void showq(queue<packet*> q);
 };
