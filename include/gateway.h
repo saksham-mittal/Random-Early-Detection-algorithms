@@ -45,6 +45,9 @@ public:
     double pb = 0;              // Probability of dropping a packet
     time_t qTime;               // Time since the queue was last idle
 
+
+  
+
     // Constructor for Gateway object
     gateway(int indexNo, int simulationTime, string traffic,string topologyPath) {
         simTime = simulationTime;
@@ -52,6 +55,7 @@ public:
         // Reading topology file for getting the info of the gateway
         ifstream fin;
         string fileName = topologyPath;
+        assert(fileName.find("topology")!=string::npos);
         fin.open(fileName);
         string line;
         while(getline(fin, line)) {
@@ -75,7 +79,6 @@ public:
         // Topology reading complete
 
         //get output file path(topology must be in topology folder)
-        // assert(fileName.find("topology")!=string::npos);
         string outputPath=fileName.substr(0,fileName.find("topology"));
         string outFileName = outputPath+"/log-" + to_string(indexNo + 1) + ".txt";
         fout.open(outFileName);
@@ -97,11 +100,21 @@ public:
     // Method for simulating RED algorithm on a packet
     void red(packet* packet);
 
+    // Method for simulating WRED algorithm on a packet
+    void wred(packet* packet);
+
     // Deques the queue and also sends the packet to the corresponding outlink
     void dequeQueue();
 
+    //set Thresholds for WRED algorithm
+    void setThresholds(const int *minThresholds,const int *maxThresholds,int n_priorities);
+
     // This method simulates each burst by calling red() on each packet of burst
     void simulateRED();
+
+
+    // This method simulates each burst by calling red() on each packet of burst
+    void simulateWRED();
 
     // The gateway creates thread for each client and calls this method
     void receivePackets(int id);
@@ -113,4 +126,10 @@ public:
 
     // Helper method to show the contents of the queue
     void showq(queue<packet*> q);
+
+  //WRED Parameters
+  //Thresholds for various priority
+private:    
+    int *WREDminThresholds;
+    int *WREDmaxThresholds;
 };

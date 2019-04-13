@@ -4,9 +4,9 @@
     To execute:
     ./server 1
 */
-#include "../include/server.h"
+#include "../../include/server.h"
 
-void server::receivePackets(int id) {
+void server::receivePackets(int id,int index) {
     while(1) {
         packet *recvpacket = new packet;
         int count = recv(clientsSockid[id], recvpacket, sizeof(*recvpacket), 0);
@@ -20,6 +20,32 @@ void server::receivePackets(int id) {
     }
 }
 
+void server::createConnection(){
+
+      sockid = socket(PF_INET, SOCK_STREAM, 0);
+        if(sockid < 0) {
+            printf("Socket could not be opened.\n");
+        }
+
+        addrport.sin_family = AF_INET;
+        addrport.sin_port = htons(portNo);
+        addrport.sin_addr.s_addr = htonl(INADDR_ANY);
+        int t = 1;
+        setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
+
+        if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) < 0) {
+            printf("Error in binding socket\n");
+        } else {
+            // Socket is bound
+            int status = listen(sockid, maxNumClients);
+            if(status < 0) {
+                printf("Error in listening.\n");
+            }
+            clilen = sizeof(clientAddr);
+        }
+
+}
+
 void server::acceptMethod(int index) {
     // Connect to clients
     clientsSockid = new int[maxNumClients];
@@ -31,7 +57,7 @@ void server::acceptMethod(int index) {
     thread clients[maxNumClients];
     for(int i=0; i<maxNumClients; i++) {
         // We can't call non static member methods directly from threads
-        clients[i] = thread(&server::receivePackets, this, i);
+        clients[i] = thread(&server::receivePackets, this, i,index);
     }
 
     for(int i=0; i<maxNumClients; i++) {
@@ -39,6 +65,8 @@ void server::acceptMethod(int index) {
     }
     cout << "Server " << index + 1 << "'s simulation finished\n";
 }
+
+
 
 int main(int argc, char const** argv) {
     if(argc != 2) {
@@ -48,7 +76,9 @@ int main(int argc, char const** argv) {
 
     int index = stoi(argv[1]) - 1;
 
-    server sv(index,"./samples/RED/topology/topology-server.txt");
 
+    server sv(index,"././samples/RED/topology/topology-server.txt");
+    sv.createConnection();
+    sv.acceptMethod(index);
     return 0;
 }

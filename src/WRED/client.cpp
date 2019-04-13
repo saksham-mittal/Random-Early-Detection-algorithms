@@ -4,11 +4,13 @@
     To execute:
     ./client 1 100 low
 */
-#include "../include/client.h"
+#include "../../include/client.h"
 
-void client::sendPacket(int id, int ind) {
+void client::sendPacket(int id, int seqNo, int priority) {
     packet *Packet = new packet();
     Packet->destPortNo = dPortNo;
+    Packet->seqNo=seqNo;
+    Packet->priority=priority;
 
     // Write a character to the socket
     Packet->charPayload = charArray[ind];
@@ -44,26 +46,35 @@ bool client::connectionSetup() {
         printf("ERROR enabling TCP_NODELAY");
         return false;
     }
+
+    return true;
 }
 
 void client::simulateHost(int index, int simTime) {
     cout << "Starting client " << index + 1 << " simulation\n";
+    int runningSum=0;
+    
+    //to log the throughput
+    ofstream foutLog;
+    foutLog.open(("sent-"+to_string(index+1)+".txt").c_str());
+    foutLog<<priority<<endl;
 
+    cout<< "Burst size= " << burstSize <<endl;
     for(int i=0; i<simTime; i++) {
         // The simTime takes to effect in 1 second
         auto start = chrono::steady_clock::now();
         srand((index + 1) * time(NULL));
-        // srand((index + 1) * (i + 1));
+
         int num = rand() % 2;       // Sending bursts randomly
         
         cout << "#" << i + 1 << ": ";
-        // cout << num << endl;
+
         if(num == 1) {
             cout << "Sending burst\n";
             // Send burstSize packets in a burst(using threads)
             thread sendTh[burstSize];
             for(int j=0; j<burstSize; j++) {
-                sendTh[j] = thread(&client::sendPacket, this, j, ind);
+                sendTh[j] = thread(&client::sendPacket, this, j, i, priority);
             }
 
             for(int j=0; j<burstSize; j++)
@@ -72,6 +83,10 @@ void client::simulateHost(int index, int simTime) {
             ind = (ind + 1) % 5;
         } else
             cout << "Not Sending burst\n";
+        //log how many packets sent
+        runningSum+=burstSize*num;
+        //write running sum (packets sent till now) to file
+        foutLog<<runningSum<<endl;    
         if(i == simTime - 1) {
             // Send close connection packet
             packet *Packet = new packet();
@@ -88,6 +103,7 @@ void client::simulateHost(int index, int simTime) {
         usleep(1000000 - tTaken);
     }
     cout << "Client " << index + 1 << " finished\n";
+    foutLog.close();
 }
 
 int main(int argc, char const** argv) {
@@ -100,6 +116,14 @@ int main(int argc, char const** argv) {
     int simTime = stoi(argv[2]);
     string traffic = argv[3];
 
-    client cl(index, simTime, traffic,"./samples/RED/topology/topology-client.txt");
+    client cl(index, simTime, traffic,"././samples/WRED/topology/topology-client.txt");
+
+    if(!cl.connectionSetup())
+    {
+        cout<< "Failed to create connection" << endl;
+        exit(-1);
+    }
+    cl.ind=0;
+    cl.simulateHost(index, simTime);
     return 0;
 }

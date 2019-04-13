@@ -27,6 +27,6 @@ plt.plot(range(len(avg)), avg, color='red', marker='D',
 plt.legend()
 
 # plt.show()
-fileName = "./samples/RED/" + traffic.strip() + "/queues-{}.png".format(index)
+fileName = "././samples/RED/" + traffic.strip() + "/queues-{}.png".format(index)
 plt.savefig(fileName, bbox_inches='tight')
 print("Graph-{} plotted successfully".format(index))

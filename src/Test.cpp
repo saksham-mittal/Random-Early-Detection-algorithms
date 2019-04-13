@@ -9,12 +9,3 @@ TEST_CASE("Creating a Gateway", "[gateway]") {
     REQUIRE(gt.simTime == 100);
     REQUIRE(gt.count == -1);
 }
-
-// TEST_CASE("Creating and Setting Values to a Point", "[point]") {
-//     Point p;
-//     p.setX(2);
-//     p.setY(3);
-
-//     REQUIRE(p.getX() == 2);
-//     REQUIRE(p.getY() == 3);
-// }
