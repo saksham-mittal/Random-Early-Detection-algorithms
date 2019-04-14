@@ -1,6 +1,0 @@
-/home/adithya/Documents/Random-Early-Detection-algorithms/src/WRED/CMakeFiles/edit_cache.dir
-/home/adithya/Documents/Random-Early-Detection-algorithms/src/WRED/CMakeFiles/testCases.dir
-/home/adithya/Documents/Random-Early-Detection-algorithms/src/WRED/CMakeFiles/client.dir
-/home/adithya/Documents/Random-Early-Detection-algorithms/src/WRED/CMakeFiles/rebuild_cache.dir
-/home/adithya/Documents/Random-Early-Detection-algorithms/src/WRED/CMakeFiles/gateway.dir
-/home/adithya/Documents/Random-Early-Detection-algorithms/src/WRED/CMakeFiles/server.dir
