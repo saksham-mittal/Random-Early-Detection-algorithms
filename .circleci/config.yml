@@ -17,7 +17,7 @@ jobs:
           command: 'apt-get update && sudo apt-get install -y cmake'
       - run:
           name: Creating Binary Files for WRED
-          command: 'mkdir build/WRED; cd build/WRED; cmake ../../src/WRED; make; cd ../..'
+          command: 'mkdir -p build/WRED; cd build/WRED; cmake ../../src/WRED; make; cd ../..'
       - run:
           name: Unit Testing
           command: './bin/WRED/testCases'
