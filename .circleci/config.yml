@@ -16,8 +16,14 @@ jobs:
           name: Install CMAKE
           command: 'apt-get update && sudo apt-get install -y cmake'
       - run:
+          name: Creating Binary Files for RED
+          command: 'mkdir -p build/RED; cd build/RED; cmake ../../src/RED; make; cd ../..'
+      - run:
+          name: Unit Testing for RED
+          command: './bin/RED/testCases'
+      - run:
           name: Creating Binary Files for WRED
           command: 'mkdir -p build/WRED; cd build/WRED; cmake ../../src/WRED; make; cd ../..'
       - run:
-          name: Unit Testing
+          name: Unit Testing for WRED
           command: './bin/WRED/testCases'
