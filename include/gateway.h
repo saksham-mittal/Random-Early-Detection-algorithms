@@ -27,11 +27,11 @@ public:
     struct sockaddr_in addrport, clientAddr;
     socklen_t clilen;
     int *clientsSockid;
-    queue<packet*> Queue;
+    queue<packet> Queue;
     mutex mtx;                  // For RED() packet synchronization
     mutex mtx2;                 // For bufferPackets synchronization
     mutex mtx3;                 // For receivedLastPacket variable's synchronization
-    vector<packet*> bufferPackets;
+    vector<packet> bufferPackets;
     map<int, int> portId;       // For mapping dest port nos to outlink's port no.
     map<int, int> mp;           // Sort of forwarding table
     ofstream fout;
@@ -46,6 +46,10 @@ public:
     time_t qTime;               // Time since the queue was last idle
 
 
+    //WRED Parameters
+    //Thresholds for various priority 
+    int *WREDminThresholds;
+    int *WREDmaxThresholds;
   
 
     // Constructor for Gateway object
@@ -101,7 +105,7 @@ public:
     void red(packet* packet);
 
     // Method for simulating WRED algorithm on a packet
-    void wred(packet* packet);
+    void wred(packet &packet);
 
     // Deques the queue and also sends the packet to the corresponding outlink
     void dequeQueue();
@@ -126,10 +130,6 @@ public:
 
     // Helper method to show the contents of the queue
     void showq(queue<packet*> q);
-
-  //WRED Parameters
-  //Thresholds for various priority
-private:    
-    int *WREDminThresholds;
-    int *WREDmaxThresholds;
+ 
+  
 };

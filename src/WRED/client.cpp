@@ -19,6 +19,9 @@ void client::sendPacket(int id, int seqNo, int priority) {
     if(count < 0) {
         printf("Error on sending.\n");
     }
+    else{
+        cout<<"Sent packet with priority "<<Packet->priority<<endl;
+    }
 }
 
 bool client::connectionSetup() {
@@ -56,8 +59,8 @@ void client::simulateHost(int index, int simTime) {
     
     //to log the throughput
     ofstream foutLog;
-    foutLog.open(("sent-"+to_string(index+1)+".txt").c_str());
-    foutLog<<priority<<endl;
+    foutLog.open(("samples/WRED/log/sent-" + to_string(index+1) + ".txt").c_str());
+    foutLog << priority << endl;
 
     cout<< "Burst size= " << burstSize <<endl;
     for(int i=0; i<simTime; i++) {
@@ -83,16 +86,22 @@ void client::simulateHost(int index, int simTime) {
             ind = (ind + 1) % 5;
         } else
             cout << "Not Sending burst\n";
-        //log how many packets sent
-        runningSum+=burstSize*num;
-        //write running sum (packets sent till now) to file
-        foutLog<<runningSum<<endl;    
+        
+        // log how many packets sent
+        runningSum += burstSize * num;
+        
+        // write running sum (packets sent till now) to file
+        foutLog << runningSum << endl;    
+        
+        
         if(i == simTime - 1) {
             // Send close connection packet
             packet *Packet = new packet();
 
             // Write a character to the socket
             Packet->isLast = true;
+            // Last packet's sequence number is set to 100
+            Packet->seqNo = 100;
             int count = send(sockid, Packet, sizeof(*Packet), 0);
             if(count < 0) {
                 printf("Error on sending.\n");
@@ -118,11 +127,11 @@ int main(int argc, char const** argv) {
 
     client cl(index, simTime, traffic,"././samples/WRED/topology/topology-client.txt");
 
-    if(!cl.connectionSetup())
-    {
+    if(!cl.connectionSetup()) {
         cout<< "Failed to create connection" << endl;
         exit(-1);
     }
+
     cl.ind=0;
     cl.simulateHost(index, simTime);
     return 0;
