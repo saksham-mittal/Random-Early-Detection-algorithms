@@ -34,8 +34,13 @@ done
 # Wait for Simulation to complete before plotting
 wait $BACK_PID
 
-# Plotting the results in a graph 
-for plotterIndex in 1 2 3
-do
-    python3 src/$1/plotter.py $plotterIndex
-done
+# Plotting the results in a graph
+
+if [ "$1" = "RED" ]; then
+    for plotterIndex in 1 2 3
+    do
+        python3 src/$1/plotter.py $plotterIndex
+    done
+else
+    python3 src/$1/plotter.py
+fi
