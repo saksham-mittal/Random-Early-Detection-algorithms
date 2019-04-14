@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/server.dir/server.cpp.o  -o /home/adithya/Documents/Random-Early-Detection-algorithms/bin/WRED/server -lpthread 

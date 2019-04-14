@@ -16,11 +16,8 @@ jobs:
           name: Install CMAKE
           command: 'apt-get update && sudo apt-get install -y cmake'
       - run:
-          name: Creating Build Files
-          command: 'cmake -H. -Bbuild'
-      - run:
-          name: Creating Binary Files
-          command: 'cmake --build build'
+          name: Creating Binary Files for WRED
+          command: 'mkdir build/WRED; cd build/WRED; cmake ../../src/WRED; make; cd ../..'
       - run:
           name: Unit Testing
-          command: './bin/testCases'
+          command: './bin/WRED/testCases'

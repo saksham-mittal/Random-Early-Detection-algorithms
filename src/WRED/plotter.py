@@ -1,32 +1,122 @@
-# import matplotlib.pyplot as plt
-# import sys
+import matplotlib.pyplot as plt
+import sys
+import glob
+import numpy as np
 
-# # plt.style.use('ggplot')
-# index = sys.argv[1]
-# with open("samples/WRED/log-{}.txt".format(index), "r") as fp:
+plt.style.use('ggplot')
+
+# get all filepaths of senders
+
+
+def get_sender_filepaths():
+    return glob.glob("samples/WRED/log/sent*.txt")
+
+
+def get_receiver_filepaths():
+    return glob.glob("samples/WRED/log/re*.txt")
+# with open("samples/WRED/log/*.txt", "r") as fp:
 #     lines = fp.readlines()
 
-# queue = []
-# avg = []
-# for count, line in enumerate(lines):
-#     if count == 0:
-#         traffic = line
-#     else:
-#         queue_len, avg_len = line.split("\t")
-#         queue.append(float(queue_len))
-#         avg.append(float(avg_len))
 
-# plt.figure(num=None, figsize=(12, 7), dpi=90, facecolor='w', edgecolor='k')
-# plt.locator_params(axis='x', nbins=10)
-# plt.title("Queue Length and Avg Queue Length for Gateway {}".format(index))
-# plt.xlabel("Simulation Time")
-# plt.plot(range(len(queue)), queue, color='#32CD32',
-#          marker='+', label="Current queue length")
-# plt.plot(range(len(avg)), avg, color='red', marker='D',
-#          ms=3, label="Average queue length")
-# plt.legend()
+def get_traffic_level():
+    with open("samples/WRED/log-{}.txt".format(1), "r") as fp:
+        lines = fp.readlines()
 
-# # plt.show()
-# fileName = "././samples/RED/" + traffic.strip() + "/queues-{}.png".format(index)
-# plt.savefig(fileName, bbox_inches='tight')
-# print("Graph-{} plotted successfully".format(index))
+        for count, line in enumerate(lines):
+            if count == 0:
+                traffic = line.strip("\n")
+                break
+    return traffic
+
+
+def parse_sender_log(sender_filepath):
+    sentTillNow = []
+    with open(sender_filepath, "r") as fp:
+        lines = fp.readlines()
+
+    for line in lines:
+        line = line.strip("\n")
+
+    priority = int(lines[0])
+
+    for line in lines[1:]:
+        sentTillNow.append(int(line))
+
+    return priority, np.array(sentTillNow)
+
+
+def parse_receiver_log(receiver_filepath, simTime):
+    recvdTillNow = {}
+    current_index = 0
+    with open(receiver_filepath, "r") as fp:
+        lines = fp.readlines()
+
+    for line in lines:
+        line = line.strip("\n")
+
+    priority = int(lines[0])
+
+    for line in lines:
+        if " " in line:
+            priority, recvd = line.split(" ")
+            priority, recvd = int(priority), int(recvd)
+            if priority in recvdTillNow.keys():
+                recvdTillNow[priority][current_index] = recvd
+            else:
+                recvdTillNow[priority] = np.zeros(simTime)
+                recvdTillNow[priority][current_index] = recvd
+        else:
+            for key in recvdTillNow.keys():
+                for i in range(current_index, int(line)):
+                    recvdTillNow[key][i] = recvdTillNow[key][current_index]
+            current_index = int(line)
+
+    return recvdTillNow
+
+
+def plot(send_dict, recv_dict, traffic_level):
+    epsilon = 1e-6
+    for priority in recv_dict.keys():
+
+        goodput = recv_dict[priority][:-2] / (send_dict[priority][:-2]+epsilon)
+        plt.plot(range(goodput.shape[0]), goodput,
+                 label="Priority {}".format(priority))
+
+    plt.xlabel("Simulation Time")
+    plt.ylabel("Goodput")
+    plt.title("Goodput vs Time for traffic level {}".format(traffic_level))
+    plt.ylim((0, 1.3))
+    plt.legend()
+    plt.savefig("././samples/WRED/{}/plot.png".format(traffic_level),
+                bbox_inches='tight')
+
+
+def main():
+    sent_dict = {}
+    recv_dict = {}
+
+    filepaths = get_sender_filepaths()
+    for filepath in filepaths:
+        priority, sentTillNow = parse_sender_log(filepath)
+        if priority in sent_dict.keys():
+            sent_dict[priority] += sentTillNow
+        else:
+            sent_dict[priority] = sentTillNow
+
+    recvFilePaths = get_receiver_filepaths()
+    for filepath in recvFilePaths:
+        recvdTillNow = parse_receiver_log(filepath, sent_dict[0].shape[0])
+        for priority in recvdTillNow.keys():
+            if priority in recv_dict.keys():
+                recv_dict[priority] += recvdTillNow[priority]
+            else:
+                recv_dict[priority] = recvdTillNow[priority]
+
+    traffic_level = get_traffic_level()
+    plot(sent_dict, recv_dict, traffic_level)
+
+    print("Graph plotted succesfully\n")
+
+
+if __name__ == "__main__":
+    main()
