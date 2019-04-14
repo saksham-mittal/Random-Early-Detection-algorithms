@@ -2,6 +2,7 @@ log*
 client
 gateway
 server
+testCases
 to-do*
 build*
 sent*
