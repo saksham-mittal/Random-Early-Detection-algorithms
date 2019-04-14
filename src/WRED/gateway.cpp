@@ -4,7 +4,7 @@
     To execute:
     ./gateway 1 100 low
 */
-#include "../include/gateway.h"
+#include "../../include/gateway.h"
 
 void gateway::setupConnection() {
     // Creating socket for the gateway
@@ -31,7 +31,7 @@ void gateway::setupConnection() {
     }
 }
 
-void gateway::red(packet* Packet) {
+void gateway::wred(packet &Packet) {
     // Calculating queue length
     if(Queue.size() == 0) {
         // double m = (time(NULL) - qTime)/0.001;
@@ -51,11 +51,11 @@ void gateway::red(packet* Packet) {
     // Check if the average queue length is between minimum
     // and maximum threshold, then probabilistically drop
     // a packet
-    if(minThreshold <= avg and avg < maxThreshold) {
+    if(WREDminThresholds[Packet.priority] <= avg and avg < WREDmaxThresholds[Packet.priority]) {
         count++;
-        pb = avg - minThreshold;
+        pb = avg - WREDminThresholds[Packet.priority];
         pb = pb * maxp;
-        pb = pb/(maxThreshold - minThreshold);
+        pb = pb/(WREDmaxThresholds[Packet.priority] - WREDminThresholds[Packet.priority]+0.0);
         double pa = pb/(1 - (count * pb));
         if(count == 50) {
             // count has reached 1/maxp, 
@@ -76,9 +76,9 @@ void gateway::red(packet* Packet) {
             // Initialize count to -1 since packet is buffered
             count = -1;
         }
-    } else if(maxThreshold <= avg) {
+    } else if(WREDmaxThresholds[Packet.priority] <= avg) {
         // Queue size is more than max threshold allowed
-        // Drop all packets 
+        // Drop all packets of that priority
         printf("Dropping packet\n");
         count = 0;
     } else {
@@ -96,19 +96,20 @@ void gateway::red(packet* Packet) {
 void gateway::dequeQueue() {
     mtx.lock();
     while(!Queue.empty()) { 
-        packet *Packet = Queue.front();
+        packet Packet = Queue.front();
         // Send the packet to the outlink using the destPortNo and the Forwarding table
-        int pNo = Packet->destPortNo;
+        int pNo = Packet.destPortNo;
 
         if(pNo != -1) {
             int outlinkPortNo = portId[pNo];
-            int count = send(mp[outlinkPortNo], Packet, sizeof(*Packet), 0);
+            int count = send(mp[outlinkPortNo], &Packet, sizeof(Packet), 0);
             if(count < 0) {
                 printf("Error on sending.\n");
             }
         } else {
+            //termination code
             for(auto elem : mp) {
-                int count = send(elem.second, Packet, sizeof(*Packet), 0);
+                int count = send(elem.second, &Packet, sizeof(Packet), 0);
                 if(count < 0) {
                     printf("Error on sending.\n");
                 } else {
@@ -119,11 +120,24 @@ void gateway::dequeQueue() {
         
         Queue.pop();
     }
+
     mtx.unlock();
     // cout << "Queue is dequeed\n";
 }
 
-void gateway::simulateRED() {
+//setter for priorities
+void gateway::setThresholds(const int *minThresholds,const int *maxThresholds,const int n_priorities)
+{
+    WREDminThresholds=new int[n_priorities];
+    WREDmaxThresholds=new int[n_priorities];
+    for(int i=0;i<n_priorities;i++)
+    {
+        WREDminThresholds[i]=minThresholds[i];
+        WREDmaxThresholds[i]=maxThresholds[i];
+    }
+}
+
+void gateway::simulateWRED() {
     mtx2.lock();
     while(bufferPackets.size()) {
         int buffer_size = bufferPackets.size();
@@ -131,9 +145,9 @@ void gateway::simulateRED() {
         // Process the packets in the buffer using RED algorithm
         for(int i=0; i<buffer_size; i++) {
             mtx.lock();
-            red(bufferPackets[i]);
+            wred(bufferPackets.front());
             mtx.unlock();
-            bufferPackets.erase(bufferPackets.begin()); 
+            bufferPackets.erase(bufferPackets.begin());
         }
     }
     mtx2.unlock();
@@ -141,22 +155,22 @@ void gateway::simulateRED() {
 
 void gateway::receivePackets(int id) {
     while(1) {
-        packet *recvpacket = new packet;
-        int count = recv(clientsSockid[id], recvpacket, sizeof(*recvpacket), 0);
+        packet recvpacket;
+        int count = recv(clientsSockid[id], &recvpacket, sizeof(recvpacket), 0);
         if(count < 0) {
             printf("Error on receiving message from socket %d.\n", id);
         }
-        if(recvpacket->isLast) {
+        if(recvpacket.isLast) {
             mtx3.lock();
             receivedLastPackets++;
             mtx3.unlock();
-            cout<<"Recieved Last Packet"<<endl;
+            cout << "Recieved Last Packet" << endl;
             return;
         }
         // Add the recieved packet to the shared buffer
         mtx2.lock();
         bufferPackets.push_back(recvpacket);
-        // printf("recieved packet %lu\n",bufferPackets.size());
+        assert(bufferPackets[bufferPackets.size()-1].priority == recvpacket.priority);
         mtx2.unlock();
     }
 }
@@ -201,6 +215,8 @@ void gateway::acceptMethod(int index, string traffic) {
         clientsSockid[i] = accept(sockid, (struct sockaddr *)&clientAddr, &clilen);
         cout << "Inlink " << i + 1 << " connected\n";
     }
+
+    //Required for synchronisation
     if(index==2)
         usleep(1300000);
 
@@ -226,13 +242,15 @@ void gateway::acceptMethod(int index, string traffic) {
         dequeQueue();
 
         cout << "#" << t + 1 << ": " << endl;
-        simulateRED();
-        auto end = chrono::steady_clock::now();
-        int tTaken = chrono::duration_cast<chrono::microseconds>(end - start).count();
-        
+        simulateWRED();
+
         mtx.lock();
         fout << Queue.size() << "\t" << avg << endl;
         mtx.unlock();
+
+        auto end = chrono::steady_clock::now();
+        int tTaken = chrono::duration_cast<chrono::microseconds>(end - start).count();
+        
         usleep(1000000 - tTaken);
     }
     cout << "Simulation finished\n";
@@ -244,7 +262,7 @@ void gateway::acceptMethod(int index, string traffic) {
     packet *recvpacket = new packet;
     recvpacket->isLast = true;
     recvpacket->destPortNo = -1;
-    Queue.push(recvpacket);
+    Queue.push(*recvpacket);
 
     for(int i=0; i<maxNumClients; i++)
         close(clientsSockid[i]);
@@ -267,7 +285,12 @@ int main(int argc, char const** argv) {
 
     int indexNo = stoi(argv[1]) - 1;
     int st = stoi(argv[2]); 
-    gateway gt(indexNo, st, argv[3]);
+    int minThresholds[]={5,8};
+    int maxThresholds[]={17,22};
+    gateway gt(indexNo, st, string(argv[3]),"././samples/WRED/topology/topology-gateway.txt");
+
+
+    gt.setThresholds(minThresholds,maxThresholds,2);
 
     gt.setupConnection();
 

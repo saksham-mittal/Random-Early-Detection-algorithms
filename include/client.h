@@ -13,29 +13,35 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <assert.h>
 #include "packet.h"
 
 using namespace std;
 
 class client {
 public:
-    int sockid, portNo, dPortNo, numHosts, burstSize, ind;
+    int sockid, portNo, dPortNo, numHosts, burstSize, ind,priority;
     char charArray[6] = "abcde";
     struct sockaddr_in addrport;
     
-    client(int index, int simTime, string traffic) {
+    client(int index, int simTime, string traffic,string topologyPath) {
         // Reading topology file for getting the info of the gateway
         ifstream fin;
-        string fileName = "./topology/topology-client.txt";
+        string fileName = topologyPath;
+        
+        assert(fileName.find("topology") != string::npos);
+        // cout << fileName << endl;
         fin.open(fileName);
-        int n, x, y;
+
+        int n, x, y, prio;
 
         fin >> n;
         for(int i=0; i<n; i++) {
-            fin >> x >> y;
+            fin >> x >> y >> prio;
             if(i == index) {
                 portNo = x;
                 dPortNo = y;
+                priority = prio;
                 break;
             }
         }
@@ -46,8 +52,9 @@ public:
         // Reading topology file complete
 
         // Reading hostrate file
-        fileName = "./samples/" + traffic + "/hostrate-" + traffic + ".txt";
-        fin.open(fileName);
+        string outputPath = fileName.substr(0, fileName.find("topology"));
+        string outFileName = outputPath + traffic + "/hostrate-" + traffic + ".txt";
+        fin.open(outFileName);
         fin >> numHosts;
 
         for(int i=0; i<numHosts; i++) {
@@ -60,15 +67,10 @@ public:
         cout << "Burst size of host = " << burstSize << endl;
         fin.close();
         // Reading hostrate file complete
-
-        connectionSetup();
-        
-        ind = 0;
-        simulateHost(index, simTime);
     }
 
     // Method for sending packets in burst
-    void sendPacket(int id, int ind);
+    void sendPacket(int id, int seqNo=0, int priority=0);
 
     // Returns true if the connection is set up successfully
     bool connectionSetup();

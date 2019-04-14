@@ -14,7 +14,7 @@
 #include <mutex>
 #include <iostream>
 #include <fstream>
-#include <set>
+#include <map>
 #include "packet.h"
 
 using namespace std;
@@ -28,10 +28,10 @@ public:
     int numClients=0,lastPacketsRecieved=0;
     mutex mtx;
 
-    server(int index) {
+    server(int index,string topologyPath) {
         // Reading topology file for getting the info of the server
         ifstream fin;
-        string fileName = "./topology/topology-server.txt";
+        string fileName = topologyPath;
         fin.open(fileName);
         int numServs, x, y;
         
@@ -49,35 +49,15 @@ public:
         fin.close();
         cout << "Topology file read\n";
 
-        sockid = socket(PF_INET, SOCK_STREAM, 0);
-        if(sockid < 0) {
-            printf("Socket could not be opened.\n");
-        }
-
-        addrport.sin_family = AF_INET;
-        addrport.sin_port = htons(portNo);
-        addrport.sin_addr.s_addr = htonl(INADDR_ANY);
-        int t = 1;
-        setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
-
-        if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) < 0) {
-            printf("Error in binding socket\n");
-        } else {
-            // Socket is bound
-            int status = listen(sockid, maxNumClients);
-            if(status < 0) {
-                printf("Error in listening.\n");
-            }
-            clilen = sizeof(clientAddr);
-        }
-
-        acceptMethod(index);
     }
 
     // This method accepts connection from all clients
     // and calls the receive method on threads for each client
     void acceptMethod(int index);
 
+    //create scoket and listen for connections from gateways
+    void createConnection();
+
     // The server creates thread for each inlink and calls this method
-    void receivePackets(int id);
+    void receivePackets(int id,int index);
 };

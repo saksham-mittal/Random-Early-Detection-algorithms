@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <thread>
 #include <arpa/inet.h>
+#include <assert.h>
 #include <chrono>
 #include <queue>
 #include <mutex>
@@ -26,11 +27,11 @@ public:
     struct sockaddr_in addrport, clientAddr;
     socklen_t clilen;
     int *clientsSockid;
-    queue<packet*> Queue;
+    queue<packet> Queue;
     mutex mtx;                  // For RED() packet synchronization
     mutex mtx2;                 // For bufferPackets synchronization
     mutex mtx3;                 // For receivedLastPacket variable's synchronization
-    vector<packet*> bufferPackets;
+    vector<packet> bufferPackets;
     map<int, int> portId;       // For mapping dest port nos to outlink's port no.
     map<int, int> mp;           // Sort of forwarding table
     ofstream fout;
@@ -44,13 +45,22 @@ public:
     double pb = 0;              // Probability of dropping a packet
     time_t qTime;               // Time since the queue was last idle
 
+
+    // WRED Parameters
+    // Thresholds for various priority 
+    int *WREDminThresholds;
+    int *WREDmaxThresholds;
+  
     // Constructor for Gateway object
-    gateway(int indexNo, int simulationTime, string traffic) {
+    gateway(int indexNo, int simulationTime, string traffic, string topologyPath) {
         simTime = simulationTime;
 
         // Reading topology file for getting the info of the gateway
         ifstream fin;
-        string fileName = "./topology/topology-gateway.txt";
+        string fileName = topologyPath;
+        
+        assert(fileName.find("topology") != string::npos);
+        
         fin.open(fileName);
         string line;
         while(getline(fin, line)) {
@@ -73,15 +83,18 @@ public:
         cout << "Topology file read\n";
         // Topology reading complete
 
-        fileName = "./samples/log-" + to_string(indexNo + 1) + ".txt";
-        fout.open(fileName);
+        // Get output file path(topology must be in topology folder)
+        string outputPath = fileName.substr(0, fileName.find("topology"));
+        string outFileName = outputPath + "/log/log-" + to_string(indexNo + 1) + ".txt";
+        fout.open(outFileName);
         // NOTE: Writing traffic level to log file
+        
         // for plotter to read 
         fout << traffic << endl;
     }
-    //destructor
-    ~gateway()
-    {
+    
+    // Destructor for closing the fstream object
+    ~gateway() {
         fout.close();
     }
 
@@ -89,13 +102,22 @@ public:
     void setupConnection();
 
     // Method for simulating RED algorithm on a packet
-    void red(packet* packet);
+    void red(packet &packet);
+
+    // Method for simulating WRED algorithm on a packet
+    void wred(packet &packet);
 
     // Deques the queue and also sends the packet to the corresponding outlink
     void dequeQueue();
 
+    //set Thresholds for WRED algorithm
+    void setThresholds(const int *minThresholds,const int *maxThresholds,int n_priorities);
+
     // This method simulates each burst by calling red() on each packet of burst
     void simulateRED();
+
+    // This method simulates each burst by calling wred() on each packet of burst
+    void simulateWRED();
 
     // The gateway creates thread for each client and calls this method
     void receivePackets(int id);
@@ -106,5 +128,7 @@ public:
     void acceptMethod(int index, string traffic);
 
     // Helper method to show the contents of the queue
-    void showq(queue<char> q);
+    void showq(queue<packet*> q);
+ 
+  
 };
