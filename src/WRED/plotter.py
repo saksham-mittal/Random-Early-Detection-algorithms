@@ -5,21 +5,19 @@ import numpy as np
 
 plt.style.use('ggplot')
 
-# get all filepaths of senders
-
-
+# Get all filepaths of senders
 def get_sender_filepaths():
-    return glob.glob("samples/WRED/log/sent*.txt")
+    return glob.glob("samples/WRED/log/log-client/sent*.txt")
 
 
+# Get all filepaths of receivers
 def get_receiver_filepaths():
-    return glob.glob("samples/WRED/log/re*.txt")
+    return glob.glob("samples/WRED/log/log-server/re*.txt")
 # with open("samples/WRED/log/*.txt", "r") as fp:
 #     lines = fp.readlines()
 
-
 def get_traffic_level():
-    with open("samples/WRED/log-{}.txt".format(1), "r") as fp:
+    with open("samples/WRED/log/log-{}.txt".format(1), "r") as fp:
         lines = fp.readlines()
 
         for count, line in enumerate(lines):
@@ -115,8 +113,7 @@ def main():
     traffic_level = get_traffic_level()
     plot(sent_dict, recv_dict, traffic_level)
 
-    print("Graph plotted succesfully\n")
-
+    print("Graph plotted succesfully")
 
 if __name__ == "__main__":
     main()
