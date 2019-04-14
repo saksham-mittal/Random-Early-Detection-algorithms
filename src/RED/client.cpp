@@ -7,14 +7,14 @@
 #include "../../include/client.h"
 
 void client::sendPacket(int id,int seqNo,int priority) {
-    packet *Packet = new packet();
-    Packet->destPortNo = dPortNo;
-    Packet->seqNo=seqNo;
+    packet Packet;
+    Packet.destPortNo = dPortNo;
+    Packet.seqNo = seqNo;
 
     // Write a character to the socket
-    Packet->charPayload = charArray[ind];
+    Packet.charPayload = charArray[ind];
     
-    int count = send(sockid, Packet, sizeof(*Packet), 0);
+    int count = send(sockid, &Packet, sizeof(Packet), 0);
     if(count < 0) {
         printf("Error on sending.\n");
     }
@@ -76,11 +76,11 @@ void client::simulateHost(int index, int simTime) {
             cout << "Not Sending burst\n";
         if(i == simTime - 1) {
             // Send close connection packet
-            packet *Packet = new packet();
+            packet Packet;
 
             // Write a character to the socket
-            Packet->isLast = true;
-            int count = send(sockid, Packet, sizeof(*Packet), 0);
+            Packet.isLast = true;
+            int count = send(sockid, &Packet, sizeof(Packet), 0);
             if(count < 0) {
                 printf("Error on sending.\n");
             }
@@ -102,13 +102,14 @@ int main(int argc, char const** argv) {
     int simTime = stoi(argv[2]);
     string traffic = argv[3];
 
-    client cl(index, simTime, traffic,"././samples/RED/topology/topology-client.txt");
-    if(!cl.connectionSetup())
-    {
+    client cl(index, simTime, traffic, "././samples/RED/topology/topology-client.txt");
+    
+    if(!cl.connectionSetup()) {
         cout<< "Failed to create connection" << endl;
         exit(-1);
     }
-    cl.ind=0;
+
+    cl.ind = 0;
     cl.simulateHost(index, simTime);
     
     return 0;

@@ -8,12 +8,12 @@
 
 void server::receivePackets(int id,int index) {
     while(1) {
-        packet *recvpacket = new packet;
-        int count = recv(clientsSockid[id], recvpacket, sizeof(*recvpacket), 0);
+        packet recvpacket;
+        int count = recv(clientsSockid[id], &recvpacket, sizeof(recvpacket), 0);
         if(count < 0) {
             printf("Error on receiving message from socket %d.\n", id);
         }
-        if(recvpacket->isLast==true) {
+        if(recvpacket.isLast==true) {
             cout << "Last packet received";
             break;   
         }
@@ -21,7 +21,6 @@ void server::receivePackets(int id,int index) {
 }
 
 void server::createConnection(){
-
       sockid = socket(PF_INET, SOCK_STREAM, 0);
         if(sockid < 0) {
             printf("Socket could not be opened.\n");
@@ -76,9 +75,11 @@ int main(int argc, char const** argv) {
 
     int index = stoi(argv[1]) - 1;
 
-
     server sv(index,"././samples/RED/topology/topology-server.txt");
+    
     sv.createConnection();
+
     sv.acceptMethod(index);
+    
     return 0;
 }

@@ -46,20 +46,21 @@ public:
     time_t qTime;               // Time since the queue was last idle
 
 
-    //WRED Parameters
-    //Thresholds for various priority 
+    // WRED Parameters
+    // Thresholds for various priority 
     int *WREDminThresholds;
     int *WREDmaxThresholds;
   
-
     // Constructor for Gateway object
-    gateway(int indexNo, int simulationTime, string traffic,string topologyPath) {
+    gateway(int indexNo, int simulationTime, string traffic, string topologyPath) {
         simTime = simulationTime;
 
         // Reading topology file for getting the info of the gateway
         ifstream fin;
         string fileName = topologyPath;
-        assert(fileName.find("topology")!=string::npos);
+        
+        assert(fileName.find("topology") != string::npos);
+        
         fin.open(fileName);
         string line;
         while(getline(fin, line)) {
@@ -82,19 +83,18 @@ public:
         cout << "Topology file read\n";
         // Topology reading complete
 
-        //get output file path(topology must be in topology folder)
-        string outputPath=fileName.substr(0,fileName.find("topology"));
-        string outFileName = outputPath+"/log-" + to_string(indexNo + 1) + ".txt";
+        // Get output file path(topology must be in topology folder)
+        string outputPath = fileName.substr(0, fileName.find("topology"));
+        string outFileName = outputPath + "/log/log-" + to_string(indexNo + 1) + ".txt";
         fout.open(outFileName);
         // NOTE: Writing traffic level to log file
-
         
         // for plotter to read 
         fout << traffic << endl;
     }
-    //destructor
-    ~gateway()
-    {
+    
+    // Destructor for closing the fstream object
+    ~gateway() {
         fout.close();
     }
 
@@ -102,7 +102,7 @@ public:
     void setupConnection();
 
     // Method for simulating RED algorithm on a packet
-    void red(packet* packet);
+    void red(packet &packet);
 
     // Method for simulating WRED algorithm on a packet
     void wred(packet &packet);
@@ -116,8 +116,7 @@ public:
     // This method simulates each burst by calling red() on each packet of burst
     void simulateRED();
 
-
-    // This method simulates each burst by calling red() on each packet of burst
+    // This method simulates each burst by calling wred() on each packet of burst
     void simulateWRED();
 
     // The gateway creates thread for each client and calls this method

@@ -7,21 +7,21 @@
 #include "../../include/client.h"
 
 void client::sendPacket(int id, int seqNo, int priority) {
-    packet *Packet = new packet();
-    Packet->destPortNo = dPortNo;
-    Packet->seqNo=seqNo;
-    Packet->priority=priority;
+    packet Packet;
+    Packet.destPortNo = dPortNo;
+    Packet.seqNo = seqNo;
+    Packet.priority = priority;
 
     // Write a character to the socket
-    Packet->charPayload = charArray[ind];
+    Packet.charPayload = charArray[ind];
     
-    int count = send(sockid, Packet, sizeof(*Packet), 0);
+    int count = send(sockid, &Packet, sizeof(Packet), 0);
     if(count < 0) {
         printf("Error on sending.\n");
     }
-    else{
-        cout<<"Sent packet with priority "<<Packet->priority<<endl;
-    }
+    /* else {
+        cout << "Sent packet with priority " << Packet.priority << endl;
+    } */
 }
 
 bool client::connectionSetup() {
@@ -55,11 +55,11 @@ bool client::connectionSetup() {
 
 void client::simulateHost(int index, int simTime) {
     cout << "Starting client " << index + 1 << " simulation\n";
-    int runningSum=0;
+    int runningSum = 0;
     
     //to log the throughput
     ofstream foutLog;
-    foutLog.open(("samples/WRED/log/sent-" + to_string(index+1) + ".txt").c_str());
+    foutLog.open(("samples/WRED/log/log-client/sent-" + to_string(index+1) + ".txt").c_str());
     foutLog << priority << endl;
 
     cout<< "Burst size= " << burstSize <<endl;
@@ -96,13 +96,13 @@ void client::simulateHost(int index, int simTime) {
         
         if(i == simTime - 1) {
             // Send close connection packet
-            packet *Packet = new packet();
+            packet Packet;
 
             // Write a character to the socket
-            Packet->isLast = true;
+            Packet.isLast = true;
             // Last packet's sequence number is set to 100
-            Packet->seqNo = 100;
-            int count = send(sockid, Packet, sizeof(*Packet), 0);
+            Packet.seqNo = 100;
+            int count = send(sockid, &Packet, sizeof(Packet), 0);
             if(count < 0) {
                 printf("Error on sending.\n");
             }
@@ -125,14 +125,14 @@ int main(int argc, char const** argv) {
     int simTime = stoi(argv[2]);
     string traffic = argv[3];
 
-    client cl(index, simTime, traffic,"././samples/WRED/topology/topology-client.txt");
+    client cl(index, simTime, traffic, "././samples/WRED/topology/topology-client.txt");
 
     if(!cl.connectionSetup()) {
         cout<< "Failed to create connection" << endl;
         exit(-1);
     }
 
-    cl.ind=0;
+    cl.ind = 0;
     cl.simulateHost(index, simTime);
     return 0;
 }

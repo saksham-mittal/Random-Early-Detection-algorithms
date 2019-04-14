@@ -12,6 +12,7 @@ public:
         priority=0;
         seqNo=0;
     }
+    
     packet(const packet &packet2) {
         isLast = packet2.isLast;
         destPortNo = packet2.destPortNo;

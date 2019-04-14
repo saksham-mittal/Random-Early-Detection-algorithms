@@ -164,7 +164,7 @@ void gateway::receivePackets(int id) {
             mtx3.lock();
             receivedLastPackets++;
             mtx3.unlock();
-            cout<<"Recieved Last Packet"<<endl;
+            cout << "Recieved Last Packet" << endl;
             return;
         }
         // Add the recieved packet to the shared buffer
@@ -241,7 +241,7 @@ void gateway::acceptMethod(int index, string traffic) {
         // forwarding all the packets to the respective servers
         dequeQueue();
 
-        // cout << "#" << t + 1 << ": " << endl;
+        cout << "#" << t + 1 << ": " << endl;
         simulateWRED();
 
         mtx.lock();

@@ -31,7 +31,7 @@ void gateway::setupConnection() {
     }
 }
 
-void gateway::red(packet* Packet) {
+void gateway::red(packet &Packet) {
     // Calculating queue length
     if(Queue.size() == 0) {
         // double m = (time(NULL) - qTime)/0.001;
@@ -67,11 +67,11 @@ void gateway::red(packet* Packet) {
         // Dropping packet with probability pa
         if(randomP <= pa) {
             if(count != 50)
-                //printf("Dropping packet\n");
+                printf("Dropping packet\n");
             // Resetting count to 0
             count = 0;
         } else {
-            //printf("Packet buffered\n");
+            printf("Packet buffered\n");
             Queue.push(Packet);
             // Initialize count to -1 since packet is buffered
             count = -1;
@@ -79,12 +79,12 @@ void gateway::red(packet* Packet) {
     } else if(maxThreshold <= avg) {
         // Queue size is more than max threshold allowed
         // Drop all packets 
-        //printf("Dropping packet\n");
+        printf("Dropping packet\n");
         count = 0;
     } else {
         // Average queue length is less than minimum threshold 
         // Accept all packets
-        //printf("Packet buffered\n");
+        printf("Packet buffered\n");
         Queue.push(Packet);
         // Since the average queue length is below minimum threshold, initialize count to -1
         count = -1;
@@ -95,22 +95,20 @@ void gateway::red(packet* Packet) {
 
 void gateway::dequeQueue() {
     mtx.lock();
-    printf("----------------------------------\n");
     while(!Queue.empty()) { 
-        packet *Packet = Queue.front();
+        packet Packet = Queue.front();
         // Send the packet to the outlink using the destPortNo and the Forwarding table
-        int pNo = Packet->destPortNo;
+        int pNo = Packet.destPortNo;
 
         if(pNo != -1) {
             int outlinkPortNo = portId[pNo];
-            int count = send(mp[outlinkPortNo], Packet, sizeof(*Packet), 0);
+            int count = send(mp[outlinkPortNo], &Packet, sizeof(Packet), 0);
             if(count < 0) {
                 printf("Error on sending.\n");
             }
-            printf("Forwarding packet with priority %d\n",Packet->priority);
         } else {
             for(auto elem : mp) {
-                int count = send(elem.second, Packet, sizeof(*Packet), 0);
+                int count = send(elem.second, &Packet, sizeof(Packet), 0);
                 if(count < 0) {
                     printf("Error on sending.\n");
                 } else {
@@ -121,7 +119,6 @@ void gateway::dequeQueue() {
         
         Queue.pop();
     }
-    printf("----------------------------------\n");
     mtx.unlock();
     // cout << "Queue is dequeed\n";
 }
@@ -134,7 +131,7 @@ void gateway::simulateRED() {
         // Process the packets in the buffer using RED algorithm
         for(int i=0; i<buffer_size; i++) {
             mtx.lock();
-            red(bufferPackets[i]);
+            red(bufferPackets.front());
             mtx.unlock();
             bufferPackets.erase(bufferPackets.begin()); 
         }
@@ -144,22 +141,22 @@ void gateway::simulateRED() {
 
 void gateway::receivePackets(int id) {
     while(1) {
-        packet *recvpacket = new packet;
-        int count = recv(clientsSockid[id], recvpacket, sizeof(*recvpacket), 0);
+        packet recvpacket;
+        int count = recv(clientsSockid[id], &recvpacket, sizeof(recvpacket), 0);
         if(count < 0) {
             printf("Error on receiving message from socket %d.\n", id);
         }
-        if(recvpacket->isLast) {
+        if(recvpacket.isLast) {
             mtx3.lock();
             receivedLastPackets++;
             mtx3.unlock();
-            cout<<"Recieved Last Packet"<<endl;
+            cout << "Recieved Last Packet" << endl;
             return;
         }
         // Add the recieved packet to the shared buffer
         mtx2.lock();
         bufferPackets.push_back(recvpacket);
-         printf("recieved packet with prioitiy %d\n",recvpacket->priority);
+        //  printf("recieved packet with prioitiy %d\n",recvpacket.priority);
         mtx2.unlock();
     }
 }
@@ -243,9 +240,9 @@ void gateway::acceptMethod(int index, string traffic) {
     for(int i=0; i<maxNumClients; i++) {
         clients[i].join();
     }
-    packet *recvpacket = new packet;
-    recvpacket->isLast = true;
-    recvpacket->destPortNo = -1;
+    packet recvpacket;
+    recvpacket.isLast = true;
+    recvpacket.destPortNo = -1;
     Queue.push(recvpacket);
 
     for(int i=0; i<maxNumClients; i++)

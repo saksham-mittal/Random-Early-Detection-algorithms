@@ -3,7 +3,7 @@ import sys
 
 # plt.style.use('ggplot')
 index = sys.argv[1]
-with open("samples/RED/log-{}.txt".format(index), "r") as fp:
+with open("samples/RED/log/log-{}.txt".format(index), "r") as fp:
     lines = fp.readlines()
 
 queue = []

@@ -29,20 +29,19 @@ public:
         ifstream fin;
         string fileName = topologyPath;
         
-
-        assert(fileName.find("topology")!=string::npos);
-        cout<<fileName<<endl;
+        assert(fileName.find("topology") != string::npos);
+        // cout << fileName << endl;
         fin.open(fileName);
 
-        int n, x, y,prio;
+        int n, x, y, prio;
 
         fin >> n;
         for(int i=0; i<n; i++) {
-            fin >> x >> y>> prio;
+            fin >> x >> y >> prio;
             if(i == index) {
                 portNo = x;
                 dPortNo = y;
-                priority=prio;
+                priority = prio;
                 break;
             }
         }
@@ -53,7 +52,6 @@ public:
         // Reading topology file complete
 
         // Reading hostrate file
-       
         string outputPath = fileName.substr(0, fileName.find("topology"));
         string outFileName = outputPath + traffic + "/hostrate-" + traffic + ".txt";
         fin.open(outFileName);
