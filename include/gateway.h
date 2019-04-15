@@ -50,6 +50,10 @@ public:
     // Thresholds for various priority 
     int *WREDminThresholds;
     int *WREDmaxThresholds;
+
+    //TailDrop Parameters 
+
+    int maxQueueSize;
   
     // Constructor for Gateway object
     gateway(int indexNo, int simulationTime, string traffic, string topologyPath) {
@@ -107,6 +111,9 @@ public:
     // Method for simulating WRED algorithm on a packet
     void wred(packet &packet);
 
+    // Method for simulating taildrop algorithm on a packet
+    void taildrop(packet &packet);
+
     // Deques the queue and also sends the packet to the corresponding outlink
     void dequeQueue();
 
@@ -119,8 +126,15 @@ public:
     // This method simulates each burst by calling wred() on each packet of burst
     void simulateWRED();
 
+    // This method simulates each burst by calling taildrop on each packet of burst
+    void simulateTD();
     // The gateway creates thread for each client and calls this method
     void receivePackets(int id);
+
+
+    //setter for max queue size
+    void setMaxQueueSize(int size);
+    
 
     // This method accepts connection from all clients 
     // and creates connection to the outlinks as well
