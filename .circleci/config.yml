@@ -27,3 +27,9 @@ jobs:
       - run:
           name: Unit Testing for WRED
           command: './bin/WRED/testCases'
+      - run:
+          name: Creating Binary Files for taildrop
+          command: 'mkdir -p build/taildrop; cd build/taildrop; cmake ../../src/taildrop; make; cd ../..'
+      - run:
+          name: Unit Testing for taildrop
+          command: './bin/taildrop/testCases'

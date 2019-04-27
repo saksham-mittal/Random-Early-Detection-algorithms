@@ -6,10 +6,12 @@
 */
 #include "../../include/server.h"
 
+
+//here priorities are being used to indicate client number
 void server::receivePackets(int id,int index) {
     int lastseqNo = 0;
     map<int,int> rcvdAtSimTime;
-    ofstream fout(("samples/WRED/log/log-server/recvd-" + to_string(id) + "-" + to_string(index) + ".txt").c_str());
+    ofstream fout(("samples/taildrop/log/log-server/recvd-" + to_string(id) + "-" + to_string(index) + ".txt").c_str());
 
     while(1) {
         packet recvpacket;
@@ -46,6 +48,8 @@ void server::receivePackets(int id,int index) {
             cout << "Last packet received"<<endl;
             break;   
         }
+        
+        
         // printf("packet recieved with priority %d,running sum=%d\n", recvpacket->priority, rcvdAtSimTime[recvpacket->priority]);
     }
     fout.close();

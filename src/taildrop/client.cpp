@@ -59,7 +59,7 @@ void client::simulateHost(int index, int simTime) {
     
     //to log the throughput
     ofstream foutLog;
-    foutLog.open(("samples/WRED/log/log-client/sent-" + to_string(index+1) + ".txt").c_str());
+    foutLog.open(("samples/taildrop/log/log-client/sent-" + to_string(index+1) + ".txt").c_str());
     foutLog << priority << endl;
 
     cout<< "Burst size= " << burstSize <<endl;
@@ -86,10 +86,9 @@ void client::simulateHost(int index, int simTime) {
             ind = (ind + 1) % 5;
         } else
             cout << "Not Sending burst\n";
-    
         
-        // write packets sent  to file
-        foutLog <<  burstSize * num << endl;    
+        // log how many packets sent
+        foutLog << burstSize * num << endl;    
         
         
         if(i == simTime - 1) {
@@ -123,7 +122,7 @@ int main(int argc, char const** argv) {
     int simTime = stoi(argv[2]);
     string traffic = argv[3];
 
-    client cl(index, simTime, traffic, "././samples/WRED/topology/topology-client.txt");
+    client cl(index, simTime, traffic, "././samples/taildrop/topology/topology-client.txt");
 
     if(!cl.connectionSetup()) {
         cout<< "Failed to create connection" << endl;

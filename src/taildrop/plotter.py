@@ -10,18 +10,16 @@ plt.style.use('ggplot')
 
 
 def get_sender_filepaths():
-    return glob.glob("samples/WRED/log/log-client/sent*.txt")
+    return glob.glob("samples/taildrop/log/log-client/sent*.txt")
 
 
 # Get all filepaths of receivers
 def get_receiver_filepaths():
-    return glob.glob("samples/WRED/log/log-server/re*.txt")
-# with open("samples/WRED/log/*.txt", "r") as fp:
-#     lines = fp.readlines()
+    return glob.glob("samples/taildrop/log/log-server/re*.txt")
 
 
 def get_traffic_level():
-    with open("samples/WRED/log/log-{}.txt".format(1), "r") as fp:
+    with open("samples/taildrop/log/log-{}.txt".format(1), "r") as fp:
         lines = fp.readlines()
 
         for count, line in enumerate(lines):
@@ -78,31 +76,28 @@ def parse_receiver_log(receiver_filepath, simTime):
 
 def plot(send_dict, recv_dict, traffic_level):
     epsilon = 1e-6
-    for priority in recv_dict.keys():
+    # for priority in list(recv_dict.keys())[:5]:
 
-        goodput_instantaneous = (recv_dict[priority][:-2] + epsilon) / \
-            (send_dict[priority][:-2] + epsilon)
+    #     goodput = (recv_dict[priority][:-2] + epsilon) / \
+    #         (send_dict[priority][:-2] + epsilon)
+    #     goodput = gaussian_filter(goodput, sigma=0.75)
+    #     plt.plot(range(goodput.shape[0]), goodput,
+    #              label="Client {}".format(priority))
 
-        goodput_instantaneous = gaussian_filter(
-            goodput_instantaneous, sigma=1.4)
-
-        plt.plot(range(goodput_instantaneous.shape[0]), goodput_instantaneous,
-                 label="Priority {}".format(priority))
-
-    for priority in recv_dict.keys():
+    for priority in list(recv_dict.keys()):
 
         goodput = (np.cumsum(recv_dict[priority][:-2]) + epsilon) / \
             (np.cumsum(send_dict[priority][:-2]) + epsilon)
-            
+        goodput = gaussian_filter(goodput, sigma=0.8)
         plt.plot(range(goodput.shape[0]), goodput,
-                 label="Priority {} Running Sum".format(priority))
+                 label="Client {} Running Sum".format(priority))
 
     plt.xlabel("Simulation Time")
     plt.ylabel("Goodput")
     plt.title("Goodput vs Time for traffic level {}".format(traffic_level))
-    plt.ylim((0, 1.3))
+    plt.ylim((0, 4))
     plt.legend()
-    plt.savefig("././samples/WRED/{}/plot.png".format(traffic_level),
+    plt.savefig("././samples/taildrop/{}/plot.png".format(traffic_level),
                 bbox_inches='tight')
 
 
@@ -128,7 +123,6 @@ def main():
                 recv_dict[priority] = recvdTillNow[priority]
 
     traffic_level = get_traffic_level()
-
     plot(sent_dict, recv_dict, traffic_level)
 
     print("Graph plotted succesfully")
