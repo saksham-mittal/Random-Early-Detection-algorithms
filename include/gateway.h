@@ -21,6 +21,19 @@
 
 using namespace std;
 
+class flow {
+public:
+    // To judge whether a flow f is an LDOS attack or a normal 
+    int indicator;
+    // Last time the packet was dropped by the Robust filter
+    int T1;
+
+    flow() {
+        indicator = 0;
+        T1 = 0;
+    }
+};
+
 class gateway {
 public:
     int sockid, maxNumClients, simTime, portNo, receivedLastPackets;
@@ -51,9 +64,13 @@ public:
     int *WREDminThresholds;
     int *WREDmaxThresholds;
 
-    //TailDrop Parameters 
-
+    // TailDrop Parameters 
     int maxQueueSize;
+
+    // RRED paramters
+    int T2 = 0;
+    int Tstar = 1;
+    map<pair<int, int>, flow> mpFlow;
   
     // Constructor for Gateway object
     gateway(int indexNo, int simulationTime, string traffic, string topologyPath) {
@@ -128,13 +145,17 @@ public:
 
     // This method simulates each burst by calling taildrop on each packet of burst
     void simulateTD();
+
+    // RED block internally used by RRED
+    bool REDBlock(packet &packet);
+
+    void simulateRRED(int arrivalTime);
+
     // The gateway creates thread for each client and calls this method
     void receivePackets(int id);
 
-
     //setter for max queue size
     void setMaxQueueSize(int size);
-    
 
     // This method accepts connection from all clients 
     // and creates connection to the outlinks as well

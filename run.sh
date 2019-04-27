@@ -36,7 +36,7 @@ wait $BACK_PID
 
 # Plotting the results in a graph
 
-if [ "$1" = "RED" ]; then
+if [ "$1" = "RED" ] || [ "$1" = "RRED" ]; then
     for plotterIndex in 1 2 3
     do
         python3 src/$1/plotter.py $plotterIndex

@@ -6,6 +6,7 @@ public:
     char charPayload;
     int priority;
     int seqNo;
+    int clientNo;
 
     packet() {
         isLast = false;
@@ -16,9 +17,9 @@ public:
     packet(const packet &packet2) {
         isLast = packet2.isLast;
         destPortNo = packet2.destPortNo;
-        charPayload =packet2.charPayload;
-        priority=packet2.priority;
-        seqNo=packet2.seqNo;
-
+        charPayload = packet2.charPayload;
+        priority = packet2.priority;
+        seqNo = packet2.seqNo;
+        clientNo = packet2.clientNo;
     }    
 };
