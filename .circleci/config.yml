@@ -35,7 +35,7 @@ jobs:
           command: './bin/taildrop/testCases'
       - run:
           name: Creating Binary Files for RRED
-          command: 'mkdir -p build/taildrop; cd build/RRED; cmake ../../src/RRED; make; cd ../..'
+          command: 'mkdir -p build/RRED; cd build/RRED; cmake ../../src/RRED; make; cd ../..'
       - run:
           name: Unit Testing for RRED
           command: './bin/RRED/testCases'
