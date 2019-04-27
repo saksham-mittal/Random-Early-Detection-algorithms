@@ -10,6 +10,7 @@ void client::sendPacket(int id, int seqNo, int priority) {
     packet Packet;
     Packet.destPortNo = dPortNo;
     Packet.seqNo = seqNo;
+    Packet.priority=priority;
     Packet.clientNo = id;
 
     // Write a character to the socket
@@ -57,6 +58,8 @@ void client::simulateHost(int index, int simTime) {
         auto start = chrono::steady_clock::now();
         srand((index + 1) * time(NULL));
         // srand((index + 1) * (i + 1));
+        if(!priority)
+        {
         int num = rand() % 2;       // Sending bursts randomly
         
         cout << "#" << i + 1 << ": ";
@@ -66,15 +69,32 @@ void client::simulateHost(int index, int simTime) {
             // Send burstSize packets in a burst(using threads)
             thread sendTh[burstSize];
             for(int j=0; j<burstSize; j++) {
-                sendTh[j] = thread(&client::sendPacket, this, index, i, 0);
+                sendTh[j] = thread(&client::sendPacket, this, index, i, priority);
             }
 
             for(int j=0; j<burstSize; j++)
                 sendTh[j].join();
 
             ind = (ind + 1) % 5;
-        } else
+        } 
+        else
             cout << "Not Sending burst\n";
+
+        } 
+        else
+        {
+            cout << "Sending burst\n";
+            // Send burstSize packets in a burst(using threads)
+            thread sendTh[burstSize];
+            for(int j=0; j<burstSize; j++) {
+                sendTh[j] = thread(&client::sendPacket, this, index, i, priority);
+            }
+
+            for(int j=0; j<burstSize; j++)
+                sendTh[j].join();
+
+            ind = (ind + 1) % 5;
+        }
         if(i == simTime - 1) {
             // Send close connection packet
             packet Packet;

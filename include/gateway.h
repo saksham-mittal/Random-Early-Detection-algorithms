@@ -29,7 +29,7 @@ public:
     int T1;
 
     flow() {
-        indicator = 0;
+        indicator = 10;
         T1 = 0;
     }
 };
