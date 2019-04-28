@@ -7,42 +7,72 @@
 #include "../../include/server.h"
 
 void server::receivePackets(int id,int index) {
+    int lastseqNo = 0;
+    map<int,int> rcvdAtSimTime;
+    ofstream fout(("samples/RRED/log/log-server/recvd-" + to_string(id) + "-" + to_string(index) + ".txt").c_str());
+
     while(1) {
         packet recvpacket;
         int count = recv(clientsSockid[id], &recvpacket, sizeof(recvpacket), 0);
         if(count < 0) {
             printf("Error on receiving message from socket %d.\n", id);
         }
-        if(recvpacket.isLast==true) {
-            cout << "Last packet received";
+        
+        // check if packet with this priority has been recieved before
+
+
+        // if new seqNo detected print previous counts for all priorities
+        if(recvpacket.seqNo != lastseqNo)
+        {
+            
+            fout << lastseqNo << endl;
+            for(auto& elem:rcvdAtSimTime) {
+                fout << elem.first << " " << elem.second << endl;
+                elem.second=0;
+            }
+            lastseqNo = recvpacket.seqNo;
+        }
+        if(rcvdAtSimTime.find(recvpacket.priority) == rcvdAtSimTime.end()) 
+        {   
+            rcvdAtSimTime[recvpacket.priority] = 1;   
+        }
+        else
+        {
+            rcvdAtSimTime[recvpacket.priority] += 1;
+        }
+
+        // update running sums
+        if(recvpacket.isLast == true) {
+            cout << "Last packet received"<<endl;
             break;   
         }
+        // printf("packet recieved with priority %d,running sum=%d\n", recvpacket->priority, rcvdAtSimTime[recvpacket->priority]);
     }
+    fout.close();
 }
 
 void server::createConnection(){
-      sockid = socket(PF_INET, SOCK_STREAM, 0);
-        if(sockid < 0) {
-            printf("Socket could not be opened.\n");
+    sockid = socket(PF_INET, SOCK_STREAM, 0);
+    if(sockid < 0) {
+        printf("Socket could not be opened.\n");
+    }
+
+    addrport.sin_family = AF_INET;
+    addrport.sin_port = htons(portNo);
+    addrport.sin_addr.s_addr = htonl(INADDR_ANY);
+    int t = 1;
+    setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
+
+    if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) < 0) {
+        printf("Error in binding socket\n");
+    } else {
+        // Socket is bound
+        int status = listen(sockid, maxNumClients);
+        if(status < 0) {
+            printf("Error in listening.\n");
         }
-
-        addrport.sin_family = AF_INET;
-        addrport.sin_port = htons(portNo);
-        addrport.sin_addr.s_addr = htonl(INADDR_ANY);
-        int t = 1;
-        setsockopt(sockid, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int));
-
-        if(bind(sockid, (struct sockaddr *)&addrport, sizeof(addrport)) < 0) {
-            printf("Error in binding socket\n");
-        } else {
-            // Socket is bound
-            int status = listen(sockid, maxNumClients);
-            if(status < 0) {
-                printf("Error in listening.\n");
-            }
-            clilen = sizeof(clientAddr);
-        }
-
+        clilen = sizeof(clientAddr);
+    }
 }
 
 void server::acceptMethod(int index) {
@@ -65,8 +95,6 @@ void server::acceptMethod(int index) {
     cout << "Server " << index + 1 << "'s simulation finished\n";
 }
 
-
-
 int main(int argc, char const** argv) {
     if(argc != 2) {
         cout << "Usage ./server <index>\n";
@@ -75,11 +103,11 @@ int main(int argc, char const** argv) {
 
     int index = stoi(argv[1]) - 1;
 
-    server sv(index,"././samples/RED/topology/topology-server.txt");
+    server sv(index,"././samples/RRED/topology/topology-server.txt");
     
     sv.createConnection();
 
     sv.acceptMethod(index);
-    
+
     return 0;
 }

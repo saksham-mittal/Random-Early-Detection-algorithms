@@ -36,11 +36,17 @@ wait $BACK_PID
 
 # Plotting the results in a graph
 
-if [ "$1" = "RED" ] || [ "$1" = "RRED" ]; then
+if [ "$1" = "RED" ]; then
     for plotterIndex in 1 2 3
     do
         python3 src/$1/plotter.py $plotterIndex
     done
+elif [ "$1" = "RRED" ]; then
+    for plotterIndex in 1 2 3
+    do
+        python3 src/$1/plotter.py $plotterIndex
+    done
+    python3 src/$1/plotter-throughput.py
 else
     python3 src/$1/plotter.py
 fi

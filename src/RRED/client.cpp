@@ -52,19 +52,25 @@ bool client::connectionSetup() {
 
 void client::simulateHost(int index, int simTime) {
     cout << "Starting client " << index + 1 << " simulation\n";
-
+    int runningSum = 0;
+    
+    //to log the throughput
+    ofstream foutLog;
+    foutLog.open(("samples/RRED/log/log-client/sent-" + to_string(index+1) + ".txt").c_str());
+    foutLog << priority << endl;
     for(int i=0; i<simTime; i++) {
         // The simTime takes to effect in 1 second
         auto start = chrono::steady_clock::now();
         srand((index + 1) * time(NULL));
         // srand((index + 1) * (i + 1));
-        if(!priority)
-        {
-        int num = rand() % 2;       // Sending bursts randomly
+        int num = 0;
+        if(!priority) {
+            num = rand() % 3;       // Sending bursts randomly
+        }
         
         cout << "#" << i + 1 << ": ";
         // cout << num << endl;
-        if(num == 1) {
+        if(num == 0) {
             cout << "Sending burst\n";
             // Send burstSize packets in a burst(using threads)
             thread sendTh[burstSize];
@@ -76,25 +82,15 @@ void client::simulateHost(int index, int simTime) {
                 sendTh[j].join();
 
             ind = (ind + 1) % 5;
+
+            
         } 
         else
             cout << "Not Sending burst\n";
 
-        } 
-        else
-        {
-            cout << "Sending burst\n";
-            // Send burstSize packets in a burst(using threads)
-            thread sendTh[burstSize];
-            for(int j=0; j<burstSize; j++) {
-                sendTh[j] = thread(&client::sendPacket, this, index, i, priority);
-            }
-
-            for(int j=0; j<burstSize; j++)
-                sendTh[j].join();
-
-            ind = (ind + 1) % 5;
-        }
+        foutLog <<  burstSize * (!num) << endl;
+            
+    
         if(i == simTime - 1) {
             // Send close connection packet
             packet Packet;
@@ -123,7 +119,7 @@ int main(int argc, char const** argv) {
     int simTime = stoi(argv[2]);
     string traffic = argv[3];
 
-    client cl(index, simTime, traffic, "././samples/RED/topology/topology-client.txt");
+    client cl(index, simTime, traffic, "././samples/RRED/topology/topology-client.txt");
     
     if(!cl.connectionSetup()) {
         cout<< "Failed to create connection" << endl;
