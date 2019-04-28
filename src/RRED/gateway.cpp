@@ -123,10 +123,10 @@ void gateway::simulateRRED(int arrivalTime) {
             if(arrivalTime >= Tmax and arrivalTime <= Tmax + Tstar) {
                 // The packet is coming very rapidly
                 // Decrease the indicator of flow by 1
-                f.indicator -= 1;
+                f.indicator = max(f.indicator - 1,-10);
             } else {
                 // Else increase the indicator of flow by 1
-                f.indicator += 1;
+                f.indicator = min(10,f.indicator+1);
             }
             if(f.indicator >= 0) {
                 // Calling RED block on the packet

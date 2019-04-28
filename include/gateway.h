@@ -17,6 +17,7 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <limits.h>
 #include "packet.h"
 
 using namespace std;
@@ -29,8 +30,8 @@ public:
     int T1;
 
     flow() {
-        indicator = 0;
-        T1 = 0;
+        indicator = 10;
+        T1 = INT_MIN;
     }
 };
 
@@ -68,7 +69,7 @@ public:
     int maxQueueSize;
 
     // RRED paramters
-    int T2 = 0;
+    int T2 = INT_MIN;
     int Tstar = 1;
     map<pair<int, int>, flow> mpFlow;
   
