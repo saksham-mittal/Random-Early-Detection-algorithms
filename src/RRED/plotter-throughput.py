@@ -7,6 +7,7 @@ from scipy.ndimage.filters import gaussian_filter
 plt.style.use('ggplot')
 
 # Get all filepaths of senders
+a = ["Host", "LDoS Attacker"]
 
 
 def get_sender_filepaths():
@@ -84,10 +85,10 @@ def plot(send_dict, recv_dict, traffic_level):
             (send_dict[priority][:-2] + epsilon)
 
         goodput_instantaneous = gaussian_filter(
-            goodput_instantaneous, sigma=1.4)
+            goodput_instantaneous, sigma=0)
 
         plt.plot(range(goodput_instantaneous.shape[0]), goodput_instantaneous,
-                 label="Priority {}".format(priority))
+                 label="{}".format(a[priority]))
 
     for priority in recv_dict.keys():
 
@@ -95,11 +96,11 @@ def plot(send_dict, recv_dict, traffic_level):
             (np.cumsum(send_dict[priority][:-2]) + epsilon)
 
         plt.plot(range(goodput.shape[0]), goodput,
-                 label="Priority {} Running Sum".format(priority))
+                 label="Cumulative: {}".format(a[priority]))
 
     plt.xlabel("Simulation Time")
-    plt.ylabel("Goodput")
-    plt.title("Goodput vs Time for traffic level {}".format(traffic_level))
+    plt.ylabel("PDR")
+    plt.title("PDR vs Time for traffic level {}".format(traffic_level))
     plt.ylim((0, 1.3))
     plt.legend()
     plt.savefig("././samples/RRED/{}/plot-throughput.png".format(traffic_level),
