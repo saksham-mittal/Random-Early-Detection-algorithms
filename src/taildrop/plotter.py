@@ -4,19 +4,15 @@ import glob
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 
-plt.style.use('ggplot')
+# plt.style.use('ggplot')
 
 # Get all filepaths of senders
-
-
 def get_sender_filepaths():
     return glob.glob("samples/taildrop/log/log-client/sent*.txt")
-
 
 # Get all filepaths of receivers
 def get_receiver_filepaths():
     return glob.glob("samples/taildrop/log/log-server/re*.txt")
-
 
 def get_traffic_level():
     with open("samples/taildrop/log/log-{}.txt".format(1), "r") as fp:
@@ -27,7 +23,6 @@ def get_traffic_level():
                 traffic = line.strip("\n")
                 break
     return traffic
-
 
 def parse_sender_log(sender_filepath):
     sentTillNow = []
@@ -73,11 +68,16 @@ def parse_receiver_log(receiver_filepath, simTime):
 
     return recvdTillNow
 
-
 def plot(send_dict, recv_dict, traffic_level):
     epsilon = 1e-6
-    # for priority in list(recv_dict.keys())[:5]:
+    plt.figure(num=None, figsize=(12, 7), dpi=90, facecolor='w', edgecolor='k')
+    plt.locator_params(axis='x', nbins=10)
+    plt.xlabel("Simulation Time")
+    plt.ylabel("PDR")
+    plt.title("PDR vs Time for traffic level {}".format(traffic_level))
+    plt.ylim((0, 4))
 
+    # for priority in list(recv_dict.keys())[:5]:
     #     goodput = (recv_dict[priority][:-2] + epsilon) / \
     #         (send_dict[priority][:-2] + epsilon)
     #     goodput = gaussian_filter(goodput, sigma=0.75)
@@ -85,21 +85,15 @@ def plot(send_dict, recv_dict, traffic_level):
     #              label="Client {}".format(priority))
 
     for priority in list(recv_dict.keys()):
-
         goodput = (np.cumsum(recv_dict[priority][:-2]) + epsilon) / \
             (np.cumsum(send_dict[priority][:-2]) + epsilon)
         goodput = gaussian_filter(goodput, sigma=0.8)
         plt.plot(range(goodput.shape[0]), goodput,
                  label="Client {} Running Sum".format(priority))
-
-    plt.xlabel("Simulation Time")
-    plt.ylabel("Goodput")
-    plt.title("Goodput vs Time for traffic level {}".format(traffic_level))
-    plt.ylim((0, 4))
+                 
     plt.legend()
     plt.savefig("././samples/taildrop/{}/plot.png".format(traffic_level),
                 bbox_inches='tight')
-
 
 def main():
     sent_dict = {}
@@ -125,8 +119,7 @@ def main():
     traffic_level = get_traffic_level()
     plot(sent_dict, recv_dict, traffic_level)
 
-    print("Graph plotted succesfully")
-
+    print("Graph for PDR plotted succesfully")
 
 if __name__ == "__main__":
     main()

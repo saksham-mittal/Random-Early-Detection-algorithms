@@ -4,22 +4,17 @@ import glob
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 
-plt.style.use('ggplot')
+# plt.style.use('ggplot')
 
 # Get all filepaths of senders
 a = ["Host", "LDoS Attacker"]
 
-
 def get_sender_filepaths():
     return glob.glob("samples/RRED/log/log-client/sent*.txt")
-
 
 # Get all filepaths of receivers
 def get_receiver_filepaths():
     return glob.glob("samples/RRED/log/log-server/re*.txt")
-# with open("samples/RRED/log/*.txt", "r") as fp:
-#     lines = fp.readlines()
-
 
 def get_traffic_level():
     with open("samples/RRED/log/log-{}.txt".format(1), "r") as fp:
@@ -30,7 +25,6 @@ def get_traffic_level():
                 traffic = line.strip("\n")
                 break
     return traffic
-
 
 def parse_sender_log(sender_filepath):
     sentTillNow = []
@@ -76,11 +70,16 @@ def parse_receiver_log(receiver_filepath, simTime):
 
     return recvdTillNow
 
-
 def plot(send_dict, recv_dict, traffic_level):
     epsilon = 1e-6
-    for priority in recv_dict.keys():
+    plt.figure(num=None, figsize=(12, 7), dpi=90, facecolor='w', edgecolor='k')
+    plt.locator_params(axis='x', nbins=10)
+    plt.xlabel("Simulation Time")
+    plt.ylabel("PDR")
+    plt.title("PDR vs Time for traffic level {}".format(traffic_level))
+    plt.ylim((0, 1.3))
 
+    for priority in recv_dict.keys():
         goodput_instantaneous = (recv_dict[priority][:-2] + epsilon) / \
             (send_dict[priority][:-2] + epsilon)
 
@@ -91,21 +90,15 @@ def plot(send_dict, recv_dict, traffic_level):
                  label="{}".format(a[priority]))
 
     for priority in recv_dict.keys():
-
         goodput = (np.cumsum(recv_dict[priority][:-2]) + epsilon) / \
             (np.cumsum(send_dict[priority][:-2]) + epsilon)
 
         plt.plot(range(goodput.shape[0]), goodput,
                  label="Cumulative: {}".format(a[priority]))
 
-    plt.xlabel("Simulation Time")
-    plt.ylabel("PDR")
-    plt.title("PDR vs Time for traffic level {}".format(traffic_level))
-    plt.ylim((0, 1.3))
     plt.legend()
     plt.savefig("././samples/RRED/{}/plot-throughput.png".format(traffic_level),
                 bbox_inches='tight')
-
 
 def main():
     sent_dict = {}
@@ -132,8 +125,7 @@ def main():
 
     plot(sent_dict, recv_dict, traffic_level)
 
-    print("Graph plotted succesfully")
-
+    print("Graph for PDR plotted succesfully")
 
 if __name__ == "__main__":
     main()
